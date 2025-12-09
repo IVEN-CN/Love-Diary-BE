@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iven.memo.mapper.MemoMapper">
+    <resultMap id="memoMap" type="com.iven.memo.models.DO.Memo">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="details" column="details"/>
+        <result property="date" column="date"/>
+    </resultMap>
+
+    <insert id="insert"  parameterType="com.iven.memo.models.DO.Memo" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO tb_memo (user_id, type, details, date)
+        VALUES (#{userId}, #{type}, #{details}, #{date})
+    </insert>
+    <update id="update">
+        UPDATE tb_memo
+        SET user_id = #{userId},
+            type = #{type},
+            details = #{details},
+            date = #{date}
+        WHERE id = #{id}
+    </update>
+    <delete id="deleteById">
+        DELETE FROM tb_memo
+        WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="memoMap">
+        SELECT * FROM tb_memo
+        WHERE id = #{id}
+    </select>
+    <select id="findAll" resultMap="memoMap">
+        SELECT * FROM tb_memo
+    </select>
+    <select id="findByUserId" resultMap="memoMap">
+        SELECT * FROM tb_memo
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

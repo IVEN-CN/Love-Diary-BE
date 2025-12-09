@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/db_memo
+    username: postgres
+    password: "000000"
+  flyway:
+    locations: classpath:db/migration/pg
