@@ -3,6 +3,7 @@ package com.iven.memo.controller;
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.MemoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ public class MemoController {
      * @return 响应消息
      */
     @PostMapping
-    public ResponseMessage<Void> addMemo(@RequestBody MemoInfoDTO memoInfoDTO) {
+    public ResponseMessage<Void> addMemo(@RequestBody @Valid MemoInfoDTO memoInfoDTO) {
         memoService.add(memoInfoDTO);
         return ResponseMessage.success();
     }

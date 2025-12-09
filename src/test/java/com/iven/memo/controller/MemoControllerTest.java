@@ -82,4 +82,56 @@ class MemoControllerTest extends BaseTest {
         log.info("Memos in database after testAddMemo: {}", memos);
         Assertions.assertEquals(1, memos.size());
     }
+
+    /**
+     * <h1>添加备忘条例，缺少日期字段</h1>
+     */
+    @Test
+    void testAddMemoMissDate() throws Exception {
+        // 准备请求体
+        MemoInfoDTO memoInfoDTO = new MemoInfoDTO(null, MemoType.NICE_EVENT, "这是一个测试备忘录");
+        String requestBody = objectMapper.writeValueAsString(memoInfoDTO);
+        log.info("Request body for testAddMemoMissDate: {}", requestBody);
+
+        // 执行操作
+        mockMvc.perform(MockMvcRequestBuilders.post("/memos")
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testAddMemoMissDate: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+
+        // 数据库校验
+        List<Memo> memos = memoMapper.findAll();
+        log.info("Memos in database after testAddMemoMissDate: {}", memos);
+        Assertions.assertEquals(0, memos.size());
+    }
+
+    /**
+     * <h1>添加备忘条例，缺少类型字段</h1>
+     */
+    @Test
+    void testAddMemoMissType() throws Exception {
+        // 准备请求体
+        MemoInfoDTO memoInfoDTO = new MemoInfoDTO(LocalDate.now(), null, "这是一个测试备忘录");
+        String requestBody = objectMapper.writeValueAsString(memoInfoDTO);
+        log.info("Request body for testAddMemoMissType: {}", requestBody);
+
+        // 执行操作
+        mockMvc.perform(MockMvcRequestBuilders.post("/memos")
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testAddMemoMissType: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+
+        // 数据库校验
+        List<Memo> memos = memoMapper.findAll();
+        log.info("Memos in database after testAddMemoMissType: {}", memos);
+        Assertions.assertEquals(0, memos.size());
+    }
 }

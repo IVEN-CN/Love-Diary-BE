@@ -1,15 +1,10 @@
--- auto-generated definition
 create table tb_memo
 (
-    id      bigserial
-        constraint tb_memo_pk
-            primary key,
+    id      bigserial,
     user_id bigint default 1            not null,
-    type    varchar
+    type    varchar                     not null
         constraint tb_memo_type_check
-            check (
-                type in ('NICE_EVENT', 'BAD_EVENT', 'REMIND_EVENT')
-                ),
+            check (type in ('NICE_EVENT', 'BAD_EVENT', 'REMIND_EVENT')),
     details text,
     date    date   default CURRENT_DATE not null
 );
@@ -17,8 +12,6 @@ create table tb_memo
 comment on table tb_memo is '备忘条例';
 
 comment on column tb_memo.id is '主键id';
-
-comment on constraint tb_memo_pk on tb_memo is '主键';
 
 comment on column tb_memo.user_id is '该条目对应user表中的用户id';
 
@@ -35,3 +28,10 @@ create unique index tb_memo_index_pk
     on tb_memo (id);
 
 comment on index tb_memo_index_pk is '主键唯一索引';
+
+alter table tb_memo
+    add constraint tb_memo_pk
+        primary key (id);
+
+comment on constraint tb_memo_pk on tb_memo is '主键';
+
