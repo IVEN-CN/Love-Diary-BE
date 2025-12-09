@@ -7,7 +7,7 @@ spring:
     baseline-on-migrate: true
 
   profiles:
-    active: local
+    active: @spring.profiles.active@
 
 mybatis:
   mapper-locations: classpath*:mapper/*.xml

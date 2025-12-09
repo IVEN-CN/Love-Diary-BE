@@ -26,6 +26,26 @@
         <tag/>
         <url/>
     </scm>
+    <profiles>
+        <profile>
+            <id>remote</id>
+            <properties>
+                <spring.profiles.active>remote</spring.profiles.active>
+            </properties>
+        </profile>
+        <profile>
+            <id>local</id>
+            <properties>
+                <spring.profiles.active>local</spring.profiles.active>
+            </properties>
+        </profile>
+        <profile>
+            <id>test</id>
+            <properties>
+                <spring.profiles.active>test</spring.profiles.active>
+            </properties>
+        </profile>
+    </profiles>
     <properties>
         <java.version>17</java.version>
     </properties>
