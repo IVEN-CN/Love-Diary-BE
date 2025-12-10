@@ -2,6 +2,7 @@ package com.iven.memo.service;
 
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
 import com.iven.memo.models.DTO.Memo.MemoInfoWithIdDTO;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -23,4 +24,11 @@ public interface MemoService {
      * @param id id
      */
     void delete(Long id);
+
+    /**
+     * 更新备忘录
+     * @param id 备忘录id
+     * @param memoInfoDTO 备忘录信息DTO
+     */
+    void update(Long id, MemoInfoDTO memoInfoDTO);
 }

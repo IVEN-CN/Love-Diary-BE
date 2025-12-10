@@ -42,4 +42,17 @@ public class MemoServiceImpl implements MemoService {
         memoMapper.deleteById(id);
         log.info("mybatis delete memo {}", id);
     }
+
+    @Override
+    public void update(Long id, MemoInfoDTO memoInfoDTO) {
+        Memo newMemo = Memo.builder()
+                .id(id)         // 设置Id，用于更新
+                .type(memoInfoDTO.getType())
+                .details(memoInfoDTO.getDetails())
+                .date(memoInfoDTO.getDate())
+                .userId(1L)     // 目前版本，将userId设置为1，
+                .build();
+        memoMapper.update(newMemo);
+        log.info("mybatis update memo {}", newMemo);
+    }
 }

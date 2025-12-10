@@ -46,4 +46,10 @@ public class MemoController {
         memoService.delete(id);
         return ResponseMessage.success();
     }
+
+    @PutMapping("/{id}")
+    public ResponseMessage<Void> updateMemo(@PathVariable Long id, @RequestBody @Valid MemoInfoDTO memoInfoDTO) {
+        memoService.update(id, memoInfoDTO);
+        return ResponseMessage.success();
+    }
 }
