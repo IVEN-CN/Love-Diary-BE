@@ -1,6 +1,7 @@
 package com.iven.memo.controller;
 
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
+import com.iven.memo.models.DTO.Memo.MemoInfoWithIdDTO;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.MemoService;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ public class MemoController {
      * @return 备忘录列表
      */
     @GetMapping
-    public ResponseMessage<List<MemoInfoDTO>> getAllMemos() {
+    public ResponseMessage<List<MemoInfoWithIdDTO>> getAllMemos() {
         return ResponseMessage.success(memoService.findAll());
     }
 
