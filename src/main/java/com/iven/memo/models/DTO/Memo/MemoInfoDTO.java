@@ -1,5 +1,6 @@
 package com.iven.memo.models.DTO.Memo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.iven.memo.models.DO.Memo;
 import com.iven.memo.models.Enumerate.MemoType;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class MemoInfoDTO {
     @NotNull(message = "日期不能为空")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDate date;
     @NotNull(message = "备忘类型不能为空")
     MemoType type;
