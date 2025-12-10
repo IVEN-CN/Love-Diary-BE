@@ -36,4 +36,10 @@ public class MemoServiceImpl implements MemoService {
         memoMapper.insert(memo);
         log.info("mybatis insert memo {}", memo);
     }
+
+    @Override
+    public void delete(Long id) {
+        memoMapper.deleteById(id);
+        log.info("mybatis delete memo {}", id);
+    }
 }

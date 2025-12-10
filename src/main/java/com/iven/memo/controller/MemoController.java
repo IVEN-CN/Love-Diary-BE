@@ -37,4 +37,13 @@ public class MemoController {
         memoService.add(memoInfoDTO);
         return ResponseMessage.success();
     }
+
+    /**
+     * 删除备注
+     */
+    @DeleteMapping("/{id}")
+    public ResponseMessage<Void> deleteMemo(@PathVariable Long id) {
+        memoService.delete(id);
+        return ResponseMessage.success();
+    }
 }

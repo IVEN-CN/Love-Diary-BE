@@ -17,4 +17,10 @@ public interface MemoService {
      * @param memoInfoDTO 备忘录信息DTO
      */
     void add(MemoInfoDTO memoInfoDTO);
+
+    /**
+     * 根据id删除备注
+     * @param id id
+     */
+    void delete(Long id);
 }
