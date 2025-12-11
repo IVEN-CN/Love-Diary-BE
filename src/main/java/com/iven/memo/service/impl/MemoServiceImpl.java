@@ -1,5 +1,6 @@
 package com.iven.memo.service.impl;
 
+import com.iven.memo.exceptions.DataNotFound;
 import com.iven.memo.mapper.MemoMapper;
 import com.iven.memo.models.DO.Memo;
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
@@ -52,7 +53,11 @@ public class MemoServiceImpl implements MemoService {
                 .date(memoInfoDTO.getDate())
                 .userId(1L)     // 目前版本，将userId设置为1，
                 .build();
-        memoMapper.update(newMemo);
+        int rowsAffected = memoMapper.update(newMemo);
+        if (rowsAffected == 0) {
+            log.warn("mybatis update rowsAffected {}", rowsAffected);
+            throw new DataNotFound("更新失败，备忘录不存在");
+        }
         log.info("mybatis update memo {}", newMemo);
     }
 }

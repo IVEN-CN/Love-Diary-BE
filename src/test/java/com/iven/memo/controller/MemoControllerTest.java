@@ -134,4 +134,149 @@ class MemoControllerTest extends BaseTest {
         log.info("Memos in database after testAddMemoMissType: {}", memos);
         Assertions.assertEquals(0, memos.size());
     }
+
+    /**
+     * <h1>修改备忘</h1>
+     * 正常修改
+     */
+    @Test
+    void testUpdateMemo() throws Exception {
+        // 数据准备
+        Memo memo = Memo.builder()
+                .type(MemoType.NICE_EVENT)
+                .date(LocalDate.now())
+                .details("原始测试文字")
+                .userId(1L)
+                .build();
+        memoMapper.insert(memo);
+        log.info("Original memo for testUpdateMemo: {}", memo);
+
+        // 准备请求体
+        MemoInfoDTO updatedMemoInfoDTO = new MemoInfoDTO(
+                LocalDate.now().plusDays(5),
+                MemoType.BAD_EVENT,
+                "修改后的测试文字"
+        );
+        String requestBody = objectMapper.writeValueAsString(updatedMemoInfoDTO);
+        log.info("Request body for testUpdateMemo: {}", requestBody);
+
+        // 执行更新
+        mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", memo.getId())
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testUpdateMemo: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        // 校验结果
+        Memo updatedMemo = memoMapper.findById(memo.getId());
+        Assertions.assertNotNull(updatedMemo);
+        Assertions.assertEquals(MemoType.BAD_EVENT, updatedMemo.getType());
+        Assertions.assertEquals("修改后的测试文字", updatedMemo.getDetails());
+        Assertions.assertEquals(LocalDate.now().plusDays(5), updatedMemo.getDate());
+    }
+
+    /**
+     * <h1>修改备忘</h1>
+     * 参数缺失(400)
+     */
+    @Test
+    void testUpdateMemoMissingParams() throws Exception {
+        // 数据准备
+        Memo memo = Memo.builder()
+                .type(MemoType.NICE_EVENT)
+                .date(LocalDate.now())
+                .details("原始测试文字")
+                .userId(1L)
+                .build();
+        memoMapper.insert(memo);
+        log.info("Original memo for testUpdateMemoMissingParams: {}", memo);
+
+        // 准备请求体，缺少字段
+        MemoInfoDTO invalidMemoInfoDTO = new MemoInfoDTO(null, null, null);
+        String requestBody = objectMapper.writeValueAsString(invalidMemoInfoDTO);
+        log.info("Request body for testUpdateMemoMissingParams: {}", requestBody);
+
+        // 执行更新
+        mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", memo.getId())
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testUpdateMemoMissingParams: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    /**
+     * <h1>修改备忘</h1>
+     * 目标id不存在(404)
+     */
+    @Test
+    void testUpdateMemoNonExistentId() throws Exception {
+        // 准备请求体
+        MemoInfoDTO updatedMemoInfoDTO = new MemoInfoDTO(
+                LocalDate.now().plusDays(3),
+                MemoType.NICE_EVENT,
+                "更新内容"
+        );
+        String requestBody = objectMapper.writeValueAsString(updatedMemoInfoDTO);
+        log.info("Request body for testUpdateMemoNonExistentId: {}", requestBody);
+
+        // 执行更新
+        mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", -1L)
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testUpdateMemoNonExistentId: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    /**
+     * <h1>删除备忘</h1>
+     * 正常删除
+     */
+    @Test
+    void testDeleteMemo() throws Exception {
+        // 数据准备
+        Memo memo = Memo.builder()
+                .type(MemoType.NICE_EVENT)
+                .date(LocalDate.now())
+                .details("测试文字")
+                .userId(1L)
+                .build();
+        memoMapper.insert(memo);
+        log.info("Original memo for testDeleteMemo: {}", memo);
+
+        // 执行删除
+        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", memo.getId()))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testDeleteMemo: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        // 校验删除
+        Memo deletedMemo = memoMapper.findById(memo.getId());
+        Assertions.assertNull(deletedMemo);
+    }
+
+    /**
+     * <h1>删除备忘</h1>
+     * 目标id不存在(200，幂等)
+     */
+    @Test
+    void testDeleteMemoNonExistentId() throws Exception {
+        // 执行删除
+        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", -1L))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("Response content in testDeleteMemoNonExistentId: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
 }

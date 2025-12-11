@@ -35,9 +35,11 @@ public interface MemoMapper {
 
     /**
      * 更新备忘录
+     *
      * @param memo 备忘录对象
+     * @return
      */
-    void update(Memo memo);
+    int update(Memo memo);
 
     /**
      * 根据ID删除备忘录
