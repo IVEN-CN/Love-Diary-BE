@@ -16,6 +16,6 @@ public class UserTokenResponseDTO {
     private String token;
     private String userName;
     private String nickName;
-    @JsonFormat(pattern = "yyyy年MM月dd日")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthday;
 }
