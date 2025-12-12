@@ -1,15 +1,22 @@
 package com.iven.memo.controller;
 
+import com.iven.memo.exceptions.JwtForbidden;
+import com.iven.memo.exceptions.LoginFail;
+import com.iven.memo.models.DO.User;
+import com.iven.memo.models.DTO.User.UserInfoDTO;
 import com.iven.memo.models.DTO.User.UserLoginRequestDTO;
 import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.BeanUtils;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/users")
@@ -27,5 +34,17 @@ class UserController {
     public ResponseMessage<UserTokenResponseDTO> extensionToken() {
         UserTokenResponseDTO responseDTO = userService.extension();
         return ResponseMessage.success(responseDTO);
+    }
+
+    @GetMapping("/jwt2user")
+    public ResponseMessage<UserInfoDTO> getUserInfoDTO() {
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        UserInfoDTO responseDTO = new UserInfoDTO();
+        if (currentUser != null) {
+            BeanUtils.copyProperties(currentUser, responseDTO);
+            return ResponseMessage.success(responseDTO);
+        } else {
+            return ResponseMessage.error(new LoginFail("无法获取用户信息"));
+        }
     }
 }
