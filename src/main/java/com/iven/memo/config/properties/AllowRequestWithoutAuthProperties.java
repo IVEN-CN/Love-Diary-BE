@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -13,6 +14,6 @@ import java.util.List;
 @ConfigurationProperties(prefix = "security.allow-request-without-auth")
 @Data
 public class AllowRequestWithoutAuthProperties {
-    private List<String> post;
-    private List<String> get;
+    private List<String> post = new ArrayList<>();
+    private List<String> get = new ArrayList<>();
 }

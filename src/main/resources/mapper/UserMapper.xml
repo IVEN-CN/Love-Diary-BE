@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.iven.memo.mapper.UserMapper">
+
+    <!-- ResultMap for User entity -->
+    <resultMap id="UserResultMap" type="com.iven.memo.models.DO.User">
+        <id property="id" column="id" />
+        <result property="userName" column="user_name" />
+        <result property="nickName" column="nick_name" />
+        <result property="password" column="password" />
+        <result property="birthday" column="birthday" />
+        <result property="avatar" column="avatar" />
+    </resultMap>
+
+    <!-- Select user by ID -->
+    <select id="findById" resultMap="UserResultMap">
+        SELECT id, user_name, nick_name, password, birthday, avatar
+        FROM tb_user
+        WHERE id = #{id}
+    </select>
+
+    <!-- Select user by name and password -->
+    <select id="findByNameAndPassword" resultMap="UserResultMap">
+        SELECT id, user_name, nick_name, password, birthday, avatar
+        FROM tb_user
+        WHERE user_name = #{name} AND password = #{password}
+    </select>
+
+    <!-- Insert user -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_user (user_name, nick_name, password, birthday, avatar)
+        VALUES (#{userName}, #{nickName}, #{password}, #{birthday}, #{avatar})
+    </insert>
+
+    <!-- Update user by ID -->
+    <update id="updateById">
+        UPDATE tb_user
+        SET
+            user_name = #{userName},
+            nick_name = #{nickName},
+            password = #{password},
+            birthday = #{birthday},
+            avatar = #{avatar}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Update user by Username -->
+    <update id="updateByUsername">
+        UPDATE tb_user
+        SET
+            nick_name = #{nickName},
+            password = #{password},
+            birthday = #{birthday},
+            avatar = #{avatar}
+        WHERE user_name = #{userName}
+    </update>
+</mapper>

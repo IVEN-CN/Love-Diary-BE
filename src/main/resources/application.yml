@@ -13,3 +13,11 @@ mybatis:
   mapper-locations: classpath*:mapper/*.xml
   type-aliases-package: com.iven.memo.models.DO
   map-underscore-to-camel-case: true
+
+security:
+  jwt:
+    secret: testSecretKeyForJwtGenerationAndValidation
+    expire-day: 7
+  allow-request-without-auth:
+    post:
+      - /users/login

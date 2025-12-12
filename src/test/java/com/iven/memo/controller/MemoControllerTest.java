@@ -1,12 +1,17 @@
 package com.iven.memo.controller;
 
 import com.iven.memo.BaseTest;
+import com.iven.memo.LoginTest;
 import com.iven.memo.mapper.MemoMapper;
+import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.Memo;
+import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
 import com.iven.memo.models.Enumerate.MemoType;
+import com.iven.memo.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.junit.jupiter.api.Test;
@@ -20,10 +25,37 @@ import java.util.List;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Slf4j
-class MemoControllerTest extends BaseTest {
+class MemoControllerTest extends BaseTest implements LoginTest {
 
     @Autowired
     private MemoMapper memoMapper;
+    @Autowired
+    private UserMapper userMapper;
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private String jwt = "";
+
+    private String getAuthHeaderContent() {
+        return "Bearer " + jwt;
+    }
+
+    @Override
+    @BeforeEach
+    public void LoginBeforeTest() {
+        // 插入user
+        User user = User.builder()
+                .nickName("test_user_nick_name")
+                .userName("test_user_name")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(user);
+        log.info("mybatis insert user in LoginBeforeTest: {}", user);
+
+        // 生成jwt
+        jwt = jwtUtil.generateToken(user.getId());
+    }
 
     /**
      * <h1>获取备忘条例</h1>
@@ -50,8 +82,9 @@ class MemoControllerTest extends BaseTest {
         log.info("saved memo in testGetMemos: {}", memo2);
 
         // 执行测试
-        mockMvc.perform(MockMvcRequestBuilders.get("/memos"))
-                .andDo(result -> {
+        mockMvc.perform(MockMvcRequestBuilders.get("/memos")
+                        .header("Authorization", getAuthHeaderContent())
+                ).andDo(result -> {
                     String responseContent = result.getResponse().getContentAsString();
                     log.info("Response content in testGetMemos: {}", responseContent);
                 }).andExpect(MockMvcResultMatchers.status().isOk());
@@ -69,6 +102,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行操作
         mockMvc.perform(MockMvcRequestBuilders.post("/memos")
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -95,6 +129,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行操作
         mockMvc.perform(MockMvcRequestBuilders.post("/memos")
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -121,6 +156,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行操作
         mockMvc.perform(MockMvcRequestBuilders.post("/memos")
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -162,6 +198,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行更新
         mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", memo.getId())
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -201,6 +238,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行更新
         mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", memo.getId())
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -227,6 +265,7 @@ class MemoControllerTest extends BaseTest {
 
         // 执行更新
         mockMvc.perform(MockMvcRequestBuilders.put("/memos/{id}", -1L)
+                        .header("Authorization", getAuthHeaderContent())
                         .contentType("application/json")
                         .content(requestBody))
                 .andDo(result -> {
@@ -253,8 +292,9 @@ class MemoControllerTest extends BaseTest {
         log.info("Original memo for testDeleteMemo: {}", memo);
 
         // 执行删除
-        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", memo.getId()))
-                .andDo(result -> {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", memo.getId())
+                        .header("Authorization", getAuthHeaderContent())
+                ).andDo(result -> {
                     String responseContent = result.getResponse().getContentAsString();
                     log.info("Response content in testDeleteMemo: {}", responseContent);
                 })
@@ -272,7 +312,8 @@ class MemoControllerTest extends BaseTest {
     @Test
     void testDeleteMemoNonExistentId() throws Exception {
         // 执行删除
-        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", -1L))
+        mockMvc.perform(MockMvcRequestBuilders.delete("/memos/{id}", -1L)
+                        .header("Authorization", getAuthHeaderContent()))
                 .andDo(result -> {
                     String responseContent = result.getResponse().getContentAsString();
                     log.info("Response content in testDeleteMemoNonExistentId: {}", responseContent);
