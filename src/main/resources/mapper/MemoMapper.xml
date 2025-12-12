@@ -34,6 +34,7 @@
     </select>
     <select id="findAll" resultMap="memoMap">
         SELECT * FROM tb_memo
+        ORDER BY date DESC
     </select>
     <select id="findByUserId" resultMap="memoMap">
         SELECT * FROM tb_memo
