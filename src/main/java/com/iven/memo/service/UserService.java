@@ -2,6 +2,7 @@ package com.iven.memo.service;
 
 import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
 import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
+import com.iven.memo.models.DTO.User.UserPwdUpdateDTO;
 import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
 
 public interface UserService {
@@ -19,4 +20,10 @@ public interface UserService {
      * @return 更新后的用户信息展示DTO
      */
     UserInfoDisplayDTO update(UserInfoUpdateDTO updateDTO);
+
+    /**
+     * 更新用户密码
+     * @param pwdUpdateDTO 用户密码更新DTO
+     */
+    void updatePwd(UserPwdUpdateDTO pwdUpdateDTO);
 }

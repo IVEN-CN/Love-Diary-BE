@@ -2,10 +2,7 @@ package com.iven.memo.controller;
 
 import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.models.DO.User;
-import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
-import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
-import com.iven.memo.models.DTO.User.UserLoginRequestDTO;
-import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
+import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
 import jakarta.validation.Valid;
@@ -53,5 +50,14 @@ class UserController {
     public ResponseMessage<UserInfoDisplayDTO> updateUserInfo(@RequestBody @Valid UserInfoUpdateDTO updateDTO) {
         UserInfoDisplayDTO responseDTO = userService.update(updateDTO);
         return ResponseMessage.success(responseDTO);
+    }
+
+    /**
+     * 更新密码
+     */
+    @PutMapping("/pwd")
+    public ResponseMessage<Void> updatePassword(UserPwdUpdateDTO pwdUpdateDTO) {
+        userService.updatePwd(pwdUpdateDTO);
+        return ResponseMessage.success();
     }
 }

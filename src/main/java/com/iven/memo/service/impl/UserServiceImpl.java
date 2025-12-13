@@ -6,6 +6,7 @@ import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
 import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
+import com.iven.memo.models.DTO.User.UserPwdUpdateDTO;
 import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
 import com.iven.memo.service.UserService;
 import com.iven.memo.utils.JwtUtil;
@@ -74,6 +75,29 @@ public class UserServiceImpl implements UserService {
             BeanUtils.copyProperties(user, userInfoDisplayDTO);
 
             return userInfoDisplayDTO;
+        } else {
+            throw new LoginFail("用户未登录，无法更新");
+        }
+    }
+
+    @Override
+    public void updatePwd(UserPwdUpdateDTO pwdUpdateDTO) {
+        User user = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (user != null) {
+            // 校验旧密码
+            if (!user.getPassword().equals(pwdUpdateDTO.getOriPwd())) {
+                throw new LoginFail("旧密码错误，无法更新密码");
+            }
+
+            // 更新为新密码
+            user.setPassword(pwdUpdateDTO.getNewPwd());
+            log.info("更新用户密码: {}", user);
+            int influence = userMapper.updateById(user);
+            log.info("mybatis update User {}", user);
+
+            if (influence <= 0) {
+                throw new GlobalException("更新用户密码时，数据库操作失败，mybatis影响行数为0");
+            }
         } else {
             throw new LoginFail("用户未登录，无法更新");
         }
