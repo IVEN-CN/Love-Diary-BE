@@ -78,12 +78,11 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 将安全上下文信息设置为用户实体
                 User user = userOptional.get();
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                         user,
                         null,
                         java.util.Collections.singletonList(new SimpleGrantedAuthority("USER"))
-                );
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                ));
 
             } catch (RuntimeException e) {
                 log.error("Token验证失败: {}", e.getMessage());

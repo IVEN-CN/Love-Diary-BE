@@ -37,4 +37,16 @@ class GlobalExceptionHandler {
         ResponseMessage<Void> resp = ResponseMessage.error(ex.getHttpStatus(), ex.getMessage());
         return new ResponseEntity<>(resp, ex.getHttpStatus());
     }
+
+    /**
+     * 处理其他未捕获的异常
+     * @param ex 异常
+     * @return 响应消息
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ResponseMessage<Void>> handleException(Exception ex) {
+        log.error(ex.getMessage(), ex);
+        ResponseMessage<Void> resp = ResponseMessage.error(HttpStatus.INTERNAL_SERVER_ERROR, "服务器内部错误");
+        return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }

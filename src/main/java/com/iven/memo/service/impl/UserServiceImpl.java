@@ -1,26 +1,29 @@
 package com.iven.memo.service.impl;
 
+import com.iven.memo.exceptions.GlobalException;
 import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.User;
+import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
+import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
 import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
 import com.iven.memo.service.UserService;
 import com.iven.memo.utils.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
-
-    public UserServiceImpl(UserMapper userMapper, JwtUtil jwtUtil) {
-        this.userMapper = userMapper;
-        this.jwtUtil = jwtUtil;
-    }
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -51,6 +54,28 @@ public class UserServiceImpl implements UserService {
                     .build();
         } else {
             throw new LoginFail("用户未登录，无法续期");
+        }
+    }
+
+    @Override
+    public UserInfoDisplayDTO update(UserInfoUpdateDTO updateDTO) {
+        User user = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (user != null) {
+            BeanUtils.copyProperties(updateDTO, user);
+            log.info("更新用户信息: {}", user);
+            int influence = userMapper.updateById(user);
+            log.info("mybatis update User {}", user);
+
+            if (influence <= 0) {
+                throw new GlobalException("更新用户信息时，数据库操作失败，mybatis影响行数为0");
+            }
+
+            UserInfoDisplayDTO userInfoDisplayDTO = new UserInfoDisplayDTO();
+            BeanUtils.copyProperties(user, userInfoDisplayDTO);
+
+            return userInfoDisplayDTO;
+        } else {
+            throw new LoginFail("用户未登录，无法更新");
         }
     }
 }

@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class UserInfoDTO {
+public class UserInfoDisplayDTO {
     private Long id;
     private String userName;        // 用户名
     private String nickName;        // 昵称
