@@ -56,7 +56,7 @@ class UserController {
      * 更新密码
      */
     @PutMapping("/pwd")
-    public ResponseMessage<Void> updatePassword(UserPwdUpdateDTO pwdUpdateDTO) {
+    public ResponseMessage<Void> updatePassword(@RequestBody @Valid UserPwdUpdateDTO pwdUpdateDTO) {
         userService.updatePwd(pwdUpdateDTO);
         return ResponseMessage.success();
     }
