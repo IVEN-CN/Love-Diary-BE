@@ -39,7 +39,7 @@ public class JwtUtil {
         return generateToken(String.valueOf(userId));
     }
 
-    public String validateToken(String token) {
+    public String validateToken(String token) throws ExpiredJwtException {
         try {
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
@@ -47,8 +47,6 @@ public class JwtUtil {
                     .parseClaimsJws(token)
                     .getBody();
             return claims.getSubject();
-        } catch (ExpiredJwtException e) {
-            throw new JwtForbidden("JWT token已过期");
         } catch (UnsupportedJwtException e) {
             throw new JwtForbidden("不支持的JWT token格式");
         } catch (MalformedJwtException e) {

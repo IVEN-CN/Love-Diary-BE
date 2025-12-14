@@ -6,12 +6,14 @@ import com.iven.memo.exceptions.FailAuth;
 import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.utils.JwtUtil;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -84,6 +86,10 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
                         java.util.Collections.singletonList(new SimpleGrantedAuthority("USER"))
                 ));
 
+            } catch (ExpiredJwtException jwtException) {
+                log.error("Token已过期: {}", jwtException.getMessage());
+                failAuthEntryPoint.commence(request, response, new FailAuth(jwtException.getMessage()), HttpStatus.UNAUTHORIZED);
+                return;
             } catch (RuntimeException e) {
                 log.error("Token验证失败: {}", e.getMessage());
                 failAuthEntryPoint.commence(request, response, new FailAuth(e.getMessage()));
