@@ -26,4 +26,10 @@ public interface UserService {
      * @param pwdUpdateDTO 用户密码更新DTO
      */
     void updatePwd(UserPwdUpdateDTO pwdUpdateDTO);
+
+    /**
+     * 获取情人用户信息
+     * @return 伴侣的用户信息
+     */
+    UserInfoDisplayDTO getLoverInfo();
 }

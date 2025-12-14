@@ -1,5 +1,6 @@
 package com.iven.memo.service.impl;
 
+import com.iven.memo.exceptions.DataNotFound;
 import com.iven.memo.exceptions.GlobalException;
 import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.mapper.UserMapper;
@@ -97,6 +98,28 @@ public class UserServiceImpl implements UserService {
 
             if (influence <= 0) {
                 throw new GlobalException("更新用户密码时，数据库操作失败，mybatis影响行数为0");
+            }
+        } else {
+            throw new LoginFail("用户未登录，无法更新");
+        }
+    }
+
+    @Override
+    public UserInfoDisplayDTO getLoverInfo() {
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser != null) {
+            Long loverId =  currentUser.getLoverId();
+            if (loverId == null) {
+                throw new DataNotFound("当前用户还没有绑定伴侣");
+            }
+
+            Optional<User> loverOptional = userMapper.findById(loverId);
+            if (loverOptional.isPresent()) {
+                User lover =  loverOptional.get();
+                return new UserInfoDisplayDTO(lover);
+            } else {
+                log.error("用户 {} 的情人不存在，但是绑定了id", currentUser);
+                throw new DataNotFound("伴侣未找到");
             }
         } else {
             throw new LoginFail("用户未登录，无法更新");

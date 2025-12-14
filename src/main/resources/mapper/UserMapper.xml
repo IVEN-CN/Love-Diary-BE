@@ -11,26 +11,32 @@
         <result property="password" column="password" />
         <result property="birthday" column="birthday" />
         <result property="avatar" column="avatar" />
+        <result property="loverId" column="lover_id" />
     </resultMap>
 
     <!-- Select user by ID -->
     <select id="findById" resultMap="UserResultMap">
-        SELECT id, user_name, nick_name, password, birthday, avatar
+        SELECT id, user_name, nick_name, password, birthday, avatar, lover_id
         FROM tb_user
         WHERE id = #{id}
     </select>
 
     <!-- Select user by name and password -->
     <select id="findByNameAndPassword" resultMap="UserResultMap">
-        SELECT id, user_name, nick_name, password, birthday, avatar
+        SELECT id, user_name, nick_name, password, birthday, avatar, lover_id
         FROM tb_user
         WHERE user_name = #{name} AND password = #{password}
+    </select>
+    <select id="findByLoverId" resultMap="UserResultMap">
+        SELECT id, user_name, nick_name, password, birthday, avatar, lover_id
+        FROM tb_user
+        WHERE lover_id = #{loverId}
     </select>
 
     <!-- Insert user -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_user (user_name, nick_name, password, birthday, avatar)
-        VALUES (#{userName}, #{nickName}, #{password}, #{birthday}, #{avatar})
+        INSERT INTO tb_user (user_name, nick_name, password, birthday, avatar, lover_id)
+        VALUES (#{userName}, #{nickName}, #{password}, #{birthday}, #{avatar}, #{loverId})
     </insert>
 
     <!-- Update user by ID -->
@@ -41,7 +47,8 @@
             nick_name = #{nickName},
             password = #{password},
             birthday = #{birthday},
-            avatar = #{avatar}
+            avatar = #{avatar},
+            lover_id = #{loverId}
         WHERE id = #{id}
     </update>
 
@@ -52,7 +59,8 @@
             nick_name = #{nickName},
             password = #{password},
             birthday = #{birthday},
-            avatar = #{avatar}
+            avatar = #{avatar},
+            lover_id = #{loverId}
         WHERE user_name = #{userName}
     </update>
 </mapper>

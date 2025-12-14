@@ -6,6 +6,7 @@ import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -59,5 +60,14 @@ class UserController {
     public ResponseMessage<Void> updatePassword(@RequestBody @Valid UserPwdUpdateDTO pwdUpdateDTO) {
         userService.updatePwd(pwdUpdateDTO);
         return ResponseMessage.success();
+    }
+
+    /**
+     * 获取伴侣信息
+     */
+    @GetMapping("/lover")
+    public ResponseMessage<UserInfoDisplayDTO> getLoverInfo() {
+        UserInfoDisplayDTO displayDTO = userService.getLoverInfo();
+        return ResponseMessage.success(displayDTO);
     }
 }

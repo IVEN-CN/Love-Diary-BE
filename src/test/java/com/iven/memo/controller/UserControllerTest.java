@@ -192,4 +192,67 @@ class UserControllerTest extends BaseTest {
         Assertions.assertTrue(updated.isPresent());
         Assertions.assertEquals("654321", updated.get().getPassword());
     }
+
+    @Test
+    void getLoverInfoSuccess() throws Exception {
+        // 准备数据：创建两个用户并建立伴侣关系
+        User user1 = User.builder()
+                .userName("user1")
+                .password("123456")
+                .nickName("用户一")
+                .birthday(LocalDate.of(1990, 1, 1))
+                .build();
+        User user2 = User.builder()
+                .userName("user2")
+                .password("654321")
+                .nickName("用户二")
+                .birthday(LocalDate.of(1992, 2, 2))
+                .build();
+        userMapper.insert(user1);
+        userMapper.insert(user2);
+
+        // 绑定伴侣关系（user1的伴侣是user2）
+        user1.setLoverId(user2.getId());
+        userMapper.updateById(user1);
+
+        // 生成user1的令牌
+        String token = jwtUtil.generateToken(user1.getId());
+
+        // 调用获取伴侣信息接口
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/lover")
+                        .header("Authorization", "Bearer " + token))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("GetLoverInfo response: {}", responseContent);
+                    // 验证响应包含伴侣信息
+                    assertTrue(responseContent.contains("user2"));
+                    assertTrue(responseContent.contains("用户二"));
+                    assertTrue(responseContent.contains("1992-02-02"));
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void getLoverInfoNoLover() throws Exception {
+        // 准备数据：创建一个没有绑定伴侣的用户
+        User user = User.builder()
+                .userName("nolovers")
+                .password("123456")
+                .nickName("无伴侣用户")
+                .build();
+        userMapper.insert(user);
+
+        // 生成令牌
+        String token = jwtUtil.generateToken(user.getId());
+
+        // 调用接口并验证异常
+        mockMvc.perform(MockMvcRequestBuilders.get("/users/lover")
+                        .header("Authorization", "Bearer " + token))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("GetLoverInfo no lover response: {}", responseContent);
+                    assertTrue(responseContent.contains("当前用户还没有绑定伴侣"));
+                })
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
 }

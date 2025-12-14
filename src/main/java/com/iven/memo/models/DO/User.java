@@ -16,4 +16,5 @@ public class User {
     private String password;        // 密码
     private LocalDate birthday;     // 生日
     private String avatar;          // 头像
+    private Long loverId;
 }

@@ -7,7 +7,8 @@ create table tb_user
     nick_name varchar(255),
     password  varchar(255) not null,
     birthday  date,
-    avatar    varchar(255)
+    avatar    varchar(255),
+    lover_id  bigint       not null
 );
 
 comment on table tb_user is '用户表';
@@ -25,6 +26,8 @@ comment on column tb_user.password is '密码';
 comment on column tb_user.birthday is '生日';
 
 comment on column tb_user.avatar is '头像';
+
+comment on column tb_user.lover_id is '伴侣id';
 
 create unique index tb_user__unique_index_user_name
     on tb_user (user_name);
