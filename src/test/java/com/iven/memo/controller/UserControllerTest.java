@@ -1,23 +1,22 @@
 package com.iven.memo.controller;
 
 import com.iven.memo.BaseTest;
-import com.iven.memo.LoginTest;
+import com.iven.memo.handler.CommonMessageWebSocketHandler;
 import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.User;
-import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
-import com.iven.memo.models.DTO.User.UserLoginRequestDTO;
-import com.iven.memo.models.DTO.User.UserPwdUpdateDTO;
-import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
+import com.iven.memo.models.DTO.User.*;
+import com.iven.memo.models.Enumerate.WSMessageType;
+import com.iven.memo.models.Message.LoverBindMessage;
 import com.iven.memo.models.Message.ResponseMessage;
+import com.iven.memo.models.Message.WSMessage;
 import com.iven.memo.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
@@ -26,6 +25,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 
 @Slf4j
 @SpringBootTest
@@ -35,6 +38,8 @@ class UserControllerTest extends BaseTest {
     private UserMapper userMapper;
     @Autowired
     private JwtUtil jwtUtil;
+    @MockitoBean
+    private CommonMessageWebSocketHandler commonMessageWebSocketHandler;
 
     @Test
     void login() throws Exception {
@@ -254,5 +259,124 @@ class UserControllerTest extends BaseTest {
                     assertTrue(responseContent.contains("当前用户还没有绑定伴侣"));
                 })
                 .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    /**
+     * 测试完整的伴侣绑定流程：
+     * 1. 用户A 发起邀请给 用户B
+     * 2. 系统生成短链并通过WebSocket通知用户B（Mock捕获）
+     * 3. 用户B 点击链接接受邀请
+     * 4. 验证数据库中两人绑定关系建立
+     */
+    @Test
+    void bindAndAcceptLoverFlow() throws Exception {
+        // 1. 数据准备：创建两个单身用户
+        User userA = User.builder()
+                .userName("UserA_Invite")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        User userB = User.builder()
+                .userName("UserB_Accept")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userA);
+        userMapper.insert(userB);
+
+        String tokenA = jwtUtil.generateToken(userA.getId());
+        String tokenB = jwtUtil.generateToken(userB.getId());
+
+        // 2. 用户A 发起绑定邀请
+        OnlyUserNameDTO inviteDTO = new OnlyUserNameDTO();
+        inviteDTO.setUsername(userB.getUserName());
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/users/lover")
+                        .header("Authorization", "Bearer " + tokenA)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(inviteDTO)))
+                .andDo(result -> log.info("Bind Invite response: {}", result.getResponse().getContentAsString()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("邀请已发送"));
+
+        // 3. 捕获 WebSocket 消息以获取生成的短链 (Link)
+        // 注意：因为是异步事件监听，使用 timeout 等待
+        ArgumentCaptor<WSMessage> wsMessageCaptor = ArgumentCaptor.forClass(WSMessage.class);
+        ArgumentCaptor<Long> userIdCaptor = ArgumentCaptor.forClass(Long.class);
+
+        verify(commonMessageWebSocketHandler, timeout(2000)).sendMessage(userIdCaptor.capture(), wsMessageCaptor.capture());
+
+        // 验证消息是发给 UserB 的
+        assertEquals(userB.getId(), userIdCaptor.getValue());
+
+        WSMessage<?> capturedMsg = wsMessageCaptor.getValue();
+        assertEquals(WSMessageType.LOVER_BIND, capturedMsg.getMessageType());
+
+        // 解析消息体获取 Link
+        //以此处实际序列化行为为准，通常Mock捕获的可能是Map或具体对象，这里利用ObjectMapper转换确保类型安全
+        LoverBindMessage bindMessage = objectMapper.convertValue(capturedMsg.getMessage(), LoverBindMessage.class);
+        String inviteLink = bindMessage.getLink();
+        assertNotNull(inviteLink, "邀请链接不应为空");
+        log.info("Captured invite link: {}", inviteLink);
+
+        // 4. 用户B 接受绑定邀请
+        mockMvc.perform(MockMvcRequestBuilders.post("/users/lover/accept/" + inviteLink)
+                        .header("Authorization", "Bearer " + tokenB))
+                .andDo(result -> log.info("Accept Bind response: {}", result.getResponse().getContentAsString()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("伴侣绑定成功"));
+
+        // 5. 验证数据库状态
+        User updatedA = userMapper.findById(userA.getId()).orElseThrow();
+        User updatedB = userMapper.findById(userB.getId()).orElseThrow();
+
+        assertEquals(updatedB.getId(), updatedA.getLoverId(), "用户A的伴侣应为用户B");
+        assertEquals(updatedA.getId(), updatedB.getLoverId(), "用户B的伴侣应为用户A");
+    }
+
+    /**
+     * 测试伴侣解绑功能
+     */
+    @Test
+    void deBindLover() throws Exception {
+        // 1. 数据准备：创建一对已绑定的伴侣
+        User userA = User.builder()
+                .userName("UserA_Bound")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        User userB = User.builder()
+                .userName("UserB_Bound")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userA);
+        userMapper.insert(userB);
+
+        // 手动建立数据库关联
+        userA.setLoverId(userB.getId());
+        userB.setLoverId(userA.getId());
+        userMapper.updateById(userA);
+        userMapper.updateById(userB);
+
+        String tokenA = jwtUtil.generateToken(userA.getId());
+
+        // 2. 用户A 发起解绑
+        mockMvc.perform(MockMvcRequestBuilders.delete("/users/lover")
+                        .header("Authorization", "Bearer " + tokenA))
+                .andDo(result -> log.info("Debind response: {}", result.getResponse().getContentAsString()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("伴侣解绑成功"));
+
+        // 3. 验证数据库状态
+        User updatedA = userMapper.findById(userA.getId()).orElseThrow();
+        User updatedB = userMapper.findById(userB.getId()).orElseThrow();
+
+        assertNull(updatedA.getLoverId(), "用户A应当没有伴侣");
+        assertNull(updatedB.getLoverId(), "用户B应当没有伴侣");
+
+        // 4. 验证是否发送了解绑通知给对方 (异步)
+        verify(commonMessageWebSocketHandler, timeout(2000).atLeastOnce())
+                .sendMessage(eq(userB.getId()), any(WSMessage.class));
     }
 }

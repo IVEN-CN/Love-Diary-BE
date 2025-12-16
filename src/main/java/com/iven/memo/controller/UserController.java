@@ -70,4 +70,34 @@ class UserController {
         UserInfoDisplayDTO displayDTO = userService.getLoverInfo();
         return ResponseMessage.success(displayDTO);
     }
+
+    /**
+     * 绑定伴侣
+     * @param userName 仅包含伴侣用户名的DTO
+     * @return 绑定的伴侣的用户信息
+     */
+    @PutMapping("/lover")
+    public ResponseMessage<Void> bindLover(@RequestBody @Valid OnlyUserNameDTO userName) {
+        userService.bindLover(userName);
+        return ResponseMessage.success("邀请已发送");
+    }
+
+    /**
+     * 解绑伴侣
+     */
+    @DeleteMapping("/lover")
+    public ResponseMessage<Void> deBindLover() {
+        userService.deBindLover();
+        return ResponseMessage.success("伴侣解绑成功");
+    }
+
+    /**
+     * 接受绑定
+     * @param link 短链链接
+     */
+    @PostMapping("/lover/accept/{link}")
+    public ResponseMessage<Void> acceptBindLover(@PathVariable String link) {
+        userService.acceptBindLover(link);
+        return ResponseMessage.success("伴侣绑定成功");
+    }
 }

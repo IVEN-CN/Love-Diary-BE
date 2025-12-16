@@ -1,9 +1,6 @@
 package com.iven.memo.service;
 
-import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
-import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
-import com.iven.memo.models.DTO.User.UserPwdUpdateDTO;
-import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
+import com.iven.memo.models.DTO.User.*;
 
 public interface UserService {
     UserTokenResponseDTO login(String username, String password);
@@ -32,4 +29,23 @@ public interface UserService {
      * @return 伴侣的用户信息
      */
     UserInfoDisplayDTO getLoverInfo();
+
+    /**
+     * 绑定伴侣
+     *
+     * @param userName 包含伴侣的用户名
+     * @return
+     */
+    void bindLover(OnlyUserNameDTO userName);
+
+    /**
+     * 解绑伴侣
+     */
+    void deBindLover();
+
+    /**
+     * 接受绑定伴侣请求
+     * @param link 短链链接
+     */
+    void acceptBindLover(String link);
 }

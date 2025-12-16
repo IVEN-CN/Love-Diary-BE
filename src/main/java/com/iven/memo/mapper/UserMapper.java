@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface UserMapper {
     Optional<User> findById(Long id);
     Optional<User> findByLoverId(Long loverId);
+    Optional<User> findByLoverUserName(String loverUserName);
     Optional<User> findByNameAndPassword(String name, String password);
     void insert(User user);
     int updateById(User user);

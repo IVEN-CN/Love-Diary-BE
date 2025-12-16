@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.iven.memo.mapper.BindInviteMapper">
+
+    <!-- ResultMap for BindInvite entity -->
+    <resultMap id="BindInviteResultMap" type="com.iven.memo.models.DO.BindInvite">
+        <id property="id" column="id" />
+        <result property="fromUserId" column="from_user_id" />
+        <result property="toUserId" column="to_user_id" />
+        <result property="expireTime" column="expire_time" />
+        <result property="used" column="used" />
+    </resultMap>
+
+    <!-- Insert BindInvite -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_bind_invite (from_user_id, to_user_id, expire_time, used)
+        VALUES (#{fromUserId}, #{toUserId}, #{expireTime}, #{used})
+    </insert>
+
+    <!-- Find by ID -->
+    <select id="findById" resultMap="BindInviteResultMap">
+        SELECT id, from_user_id, to_user_id, expire_time, used
+        FROM tb_bind_invite
+        WHERE id = #{id}
+            AND expire_time > NOW()
+    </select>
+    <select id="findAll" resultMap="BindInviteResultMap">
+        SELECT *
+        FROM tb_bind_invite
+    </select>
+
+    <!-- Delete by ID -->
+    <delete id="deleteById">
+        DELETE FROM tb_bind_invite
+        WHERE id = #{id}
+    </delete>
+
+    <!-- Use Invite -->
+    <update id="useInvite">
+        UPDATE tb_bind_invite
+        SET used = true
+        WHERE id = #{id}
+    </update>
+
+</mapper>

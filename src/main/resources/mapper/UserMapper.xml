@@ -32,6 +32,11 @@
         FROM tb_user
         WHERE lover_id = #{loverId}
     </select>
+    <select id="findByLoverUserName" resultMap="UserResultMap">
+        SELECT id, user_name, nick_name, password, birthday, avatar, lover_id
+        FROM tb_user
+        WHERE user_name = #{loverUserName}
+    </select>
 
     <!-- Insert user -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">

@@ -1,22 +1,30 @@
 package com.iven.memo.service.impl;
 
-import com.iven.memo.exceptions.DataNotFound;
-import com.iven.memo.exceptions.GlobalException;
-import com.iven.memo.exceptions.LoginFail;
+import com.iven.memo.exceptions.*;
+import com.iven.memo.handler.CommonMessageWebSocketHandler;
+import com.iven.memo.mapper.BindInviteMapper;
 import com.iven.memo.mapper.UserMapper;
+import com.iven.memo.models.DO.BindInvite;
 import com.iven.memo.models.DO.User;
-import com.iven.memo.models.DTO.User.UserInfoDisplayDTO;
-import com.iven.memo.models.DTO.User.UserInfoUpdateDTO;
-import com.iven.memo.models.DTO.User.UserPwdUpdateDTO;
-import com.iven.memo.models.DTO.User.UserTokenResponseDTO;
+import com.iven.memo.models.DTO.BindInvite.BindInviteRequest;
+import com.iven.memo.models.DTO.User.*;
+import com.iven.memo.models.Enumerate.BindType;
+import com.iven.memo.models.Enumerate.WSMessageType;
+import com.iven.memo.models.Message.WSMessage;
 import com.iven.memo.service.UserService;
+import com.iven.memo.utils.Base62Utils;
 import com.iven.memo.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Base64Util;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -26,6 +34,9 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
+    private final CommonMessageWebSocketHandler commonMessageWebSocketHandler;
+    private final BindInviteMapper inviteMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -123,6 +134,146 @@ public class UserServiceImpl implements UserService {
             }
         } else {
             throw new LoginFail("用户未登录，无法更新");
+        }
+    }
+
+    @Override
+    public void bindLover(OnlyUserNameDTO userName) {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser == null) {
+            throw new LoginFail("用户未登录，无法绑定伴侣");
+        }
+
+        // 取出伴侣user
+        Optional<User> loverOptional = userMapper.findByLoverUserName(userName.getUsername());
+        if (loverOptional.isEmpty()) {
+            throw new DataNotFound("未找到该伴侣用户");
+        }
+
+        User lover = loverOptional.get();
+        if (lover.getLoverId() != null) {
+            throw new DataAlreadyExist("该用户已有伴侣，无法绑定");
+        }
+
+        // 生成邀请信息
+        LocalDateTime expireTime = LocalDateTime.now().plusDays(3);
+        BindInvite invite = BindInvite.builder()
+                .fromUserId(currentUser.getId())
+                .toUserId(lover.getId())
+                .expireTime(expireTime)        // 3天后过期
+                .build();
+        inviteMapper.insert(invite);
+        log.info("生成伴侣绑定邀请: {}", invite);
+
+        // 生成短链
+        Long inviteId = invite.getId();
+        if (inviteId == null) {
+            log.error("生成伴侣绑定邀请失败，邀请ID为空: {}", invite);
+            throw new RuntimeException("生成伴侣绑定邀请失败，mybatis没有回写id");
+        }
+        String base62Id = Base62Utils.encode(inviteId);
+        log.info("生成伴侣绑定邀请短链: {}", base62Id);
+
+        // 发布绑定事件
+        BindInfoDTO bindInfo = BindInfoDTO.builder()
+                .fromUser(currentUser)
+                .toUser(lover)
+                .link(base62Id)
+                .bindType(BindType.BIND)
+                .build();
+        applicationEventPublisher.publishEvent(bindInfo);
+    }
+
+    @Override
+    @Transactional
+    public void deBindLover() {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser == null) {
+            throw new LoginFail("用户未登录，无法解绑伴侣");
+        }
+
+        // 解绑不需要伴侣同意，直接解绑
+        Long loverId = currentUser.getLoverId();
+        if (loverId == null) {
+            throw new DataNotFound("当前用户还没有绑定伴侣");
+        }
+
+        Optional<User> loverOptional = userMapper.findById(loverId);
+        if (loverOptional.isEmpty()) {
+            log.error("用户 {} 的情人不存在，但是绑定了id", currentUser);
+            throw new DataNotFound("伴侣未找到");
+        }
+
+        // 发布解绑事件
+        BindInfoDTO bindInfo = BindInfoDTO.builder()
+                .fromUser(currentUser)
+                .toUser(loverOptional.get())
+                .link(null)
+                .bindType(BindType.DEBIND)
+                .build();
+        applicationEventPublisher.publishEvent(bindInfo);
+
+        // 清除当前用户的loverId
+        currentUser.setLoverId(null);
+        int influence1 = userMapper.updateById(currentUser);
+        log.info("mybatis update User {}", currentUser);
+        if (influence1 <= 0) {
+            throw new GlobalException("解绑伴侣时，更新当前用户失败，mybatis影响行数为0");
+        }
+
+        // 清除伴侣的loverId
+        User lover = loverOptional.get();
+        lover.setLoverId(null);
+        int influence2 = userMapper.updateById(lover);
+        log.info("mybatis update User {}", lover);
+        if (influence2 <= 0) {
+            throw new GlobalException("解绑伴侣时，更新伴侣用户失败，mybatis影响行数为0");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void acceptBindLover(String link) {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser == null) {
+            throw new LoginFail("用户未登录，无法解绑伴侣");
+        }
+
+        // 找出邀请码id
+        Long inviteId = Base62Utils.decode(link);
+        Optional<BindInvite> inviteOptional = inviteMapper.findById(inviteId);
+        if (inviteOptional.isEmpty()) {
+            throw new DataNotFound("绑定邀请不存在或已过期");
+        }
+
+        BindInvite invite = inviteOptional.get();
+        if (!invite.getToUserId().equals(currentUser.getId())) {
+            throw new PermissionDeny("绑定邀请的接收用户与当前用户不匹配");
+        }
+        // 使用邀请码
+        invite.setUsed(true);
+
+        // 取出lover
+        Optional<User> loverOptional = userMapper.findById(invite.getFromUserId());
+        if (loverOptional.isEmpty()) {
+            log.error("绑定邀请的发送用户不存在: {}", invite);
+            throw new DataNotFound("绑定邀请的发送用户不存在");
+        }
+        User lover = loverOptional.get();
+        lover.setLoverId(invite.getToUserId());
+        int influenceLoverUserUpdate = userMapper.updateById(lover);
+        if (influenceLoverUserUpdate <= 0) {
+            throw new GlobalException("接受伴侣绑定时，更新伴侣用户失败，mybatis影响行数为0");
+        }
+
+        // 更新当前用户的loverId
+        currentUser.setLoverId(invite.getFromUserId());
+        int influenceCurrentUserUpdate = userMapper.updateById(currentUser);
+        if (influenceCurrentUserUpdate <= 0) {
+            throw new GlobalException("接受伴侣绑定时，更新当前用户失败，mybatis影响行数为0");
         }
     }
 }
