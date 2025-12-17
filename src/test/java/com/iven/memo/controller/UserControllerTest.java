@@ -40,6 +40,8 @@ class UserControllerTest extends BaseTest {
     private JwtUtil jwtUtil;
     @MockitoBean
     private CommonMessageWebSocketHandler commonMessageWebSocketHandler;
+    @MockitoBean
+    private com.iven.memo.service.BindInviteRedisService bindInviteRedisService;
 
     @Test
     void login() throws Exception {

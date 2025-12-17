@@ -17,7 +17,10 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "spring.data.redis.host=localhost",
+    "spring.data.redis.port=6379"
+})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
