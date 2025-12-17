@@ -2,6 +2,7 @@ package com.iven.memo.controller;
 
 import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.models.DO.User;
+import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
@@ -116,8 +117,8 @@ class UserController {
      * @return 绑定邀请记录（如果有的话）
      */
     @GetMapping("/lover/invite")
-    public ResponseMessage<com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO> getBindInviteRecord() {
-        com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO record = userService.getBindInviteRecord();
+    public ResponseMessage<BindInviteRecordDTO> getBindInviteRecord() {
+        BindInviteRecordDTO record = userService.getBindInviteRecord();
         return ResponseMessage.success(record);
     }
 }
