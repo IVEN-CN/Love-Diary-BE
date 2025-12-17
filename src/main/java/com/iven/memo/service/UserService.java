@@ -48,4 +48,10 @@ public interface UserService {
      * @param link 短链链接
      */
     void acceptBindLover(String link);
+
+    /**
+     * 拒绝绑定伴侣请求
+     * @param link 短链链接
+     */
+    void rejectBindLover(String link);
 }

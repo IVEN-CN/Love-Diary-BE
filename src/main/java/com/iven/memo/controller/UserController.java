@@ -100,4 +100,14 @@ class UserController {
         userService.acceptBindLover(link);
         return ResponseMessage.success("伴侣绑定成功");
     }
+
+    /**
+     * 拒绝邀请
+     * @param link 短链链接
+     */
+    @DeleteMapping("/lover/reject/{link}")
+    public ResponseMessage<Void> rejectBindLover(@PathVariable String link) {
+        userService.rejectBindLover(link);
+        return ResponseMessage.success("伴侣绑定邀请已拒绝");
+    }
 }

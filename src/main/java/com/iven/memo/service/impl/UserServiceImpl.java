@@ -254,7 +254,7 @@ public class UserServiceImpl implements UserService {
             throw new PermissionDeny("绑定邀请的接收用户与当前用户不匹配");
         }
         // 使用邀请码
-        invite.setUsed(true);
+        inviteMapper.useInvite(inviteId);
 
         // 取出lover
         Optional<User> loverOptional = userMapper.findById(invite.getFromUserId());
@@ -275,5 +275,28 @@ public class UserServiceImpl implements UserService {
         if (influenceCurrentUserUpdate <= 0) {
             throw new GlobalException("接受伴侣绑定时，更新当前用户失败，mybatis影响行数为0");
         }
+
+        // TODO 发布接受事件
+    }
+
+    @Override
+    public void rejectBindLover(String link) {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser == null) {
+            throw new LoginFail("用户未登录，无法解绑伴侣");
+        }
+
+        // 找出邀请码
+        Long inviteId = Base62Utils.decode(link);
+        Optional<BindInvite> inviteOptional = inviteMapper.findById(inviteId);
+        if (inviteOptional.isEmpty()) {
+            throw new DataNotFound("绑定邀请不存在或已过期");
+        }
+
+        // 将邀请码设置为已使用
+        inviteMapper.useInvite(inviteId);
+
+        // TODO 发布拒绝事件
     }
 }
