@@ -1,5 +1,6 @@
 package com.iven.memo.service;
 
+import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.User.*;
 
 public interface UserService {
@@ -54,4 +55,10 @@ public interface UserService {
      * @param link 短链链接
      */
     void rejectBindLover(String link);
+
+    /**
+     * 获取绑定邀请记录
+     * @return 绑定邀请记录（包含响应状态）
+     */
+    BindInviteRecordDTO getBindInviteRecord();
 }

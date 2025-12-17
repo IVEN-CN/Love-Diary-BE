@@ -6,11 +6,16 @@ import com.iven.memo.mapper.BindInviteMapper;
 import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.BindInvite;
 import com.iven.memo.models.DO.User;
+import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRequest;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Enumerate.BindType;
 import com.iven.memo.models.Enumerate.WSMessageType;
+import com.iven.memo.models.Message.BindInviteRecord;
+import com.iven.memo.models.Message.BindResponseRecord;
+import com.iven.memo.models.Message.LoverBindMessage;
 import com.iven.memo.models.Message.WSMessage;
+import com.iven.memo.service.BindInviteRedisService;
 import com.iven.memo.service.UserService;
 import com.iven.memo.utils.Base62Utils;
 import com.iven.memo.utils.JwtUtil;
@@ -37,6 +42,7 @@ public class UserServiceImpl implements UserService {
     private final CommonMessageWebSocketHandler commonMessageWebSocketHandler;
     private final BindInviteMapper inviteMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final BindInviteRedisService bindInviteRedisService;
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -175,6 +181,16 @@ public class UserServiceImpl implements UserService {
         String base62Id = Base62Utils.encode(inviteId);
         log.info("生成伴侣绑定邀请短链: {}", base62Id);
 
+        // 保存邀请记录到Redis（7天过期）
+        BindInviteRecord inviteRecord = BindInviteRecord.builder()
+                .fromUserId(currentUser.getId())
+                .fromUserName(currentUser.getUserName())
+                .toUserId(lover.getId())
+                .link(base62Id)
+                .createTime(LocalDateTime.now())
+                .build();
+        bindInviteRedisService.saveInviteRecord(inviteRecord);
+
         // 发布绑定事件
         BindInfoDTO bindInfo = BindInfoDTO.builder()
                 .fromUser(currentUser)
@@ -276,7 +292,36 @@ public class UserServiceImpl implements UserService {
             throw new GlobalException("接受伴侣绑定时，更新当前用户失败，mybatis影响行数为0");
         }
 
-        // TODO 发布接受事件
+        // 保存响应记录到Redis（7天过期）
+        BindResponseRecord responseRecord = BindResponseRecord.builder()
+                .fromUserId(invite.getFromUserId())
+                .responseUserId(currentUser.getId())
+                .responseUserName(currentUser.getUserName())
+                .accepted(true)
+                .responseTime(LocalDateTime.now())
+                .build();
+        bindInviteRedisService.saveResponseRecord(responseRecord);
+
+        // 删除邀请记录
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId());
+
+        // 发送WebSocket消息通知邀请发起人
+        LoverBindMessage acceptMessage = LoverBindMessage.builder()
+                .fromUserId(currentUser.getId())
+                .fromUserName(currentUser.getUserName())
+                .link(null)
+                .build();
+        WSMessage<LoverBindMessage> wsMessage = WSMessage.<LoverBindMessage>builder()
+                .messageType(WSMessageType.BIND_ACCEPT)
+                .message(acceptMessage)
+                .build();
+        
+        try {
+            commonMessageWebSocketHandler.sendMessage(invite.getFromUserId(), wsMessage);
+            log.info("发送接受绑定消息给用户: {}", invite.getFromUserId());
+        } catch (Exception e) {
+            log.error("发送接受绑定消息失败: {}", e.getMessage(), e);
+        }
     }
 
     @Override
@@ -297,6 +342,69 @@ public class UserServiceImpl implements UserService {
         // 将邀请码设置为已使用
         inviteMapper.useInvite(inviteId);
 
-        // TODO 发布拒绝事件
+        // 获取邀请详情
+        BindInvite invite = inviteOptional.get();
+        if (!invite.getToUserId().equals(currentUser.getId())) {
+            throw new PermissionDeny("绑定邀请的接收用户与当前用户不匹配");
+        }
+
+        // 保存响应记录到Redis（7天过期）
+        BindResponseRecord responseRecord = BindResponseRecord.builder()
+                .fromUserId(invite.getFromUserId())
+                .responseUserId(currentUser.getId())
+                .responseUserName(currentUser.getUserName())
+                .accepted(false)
+                .responseTime(LocalDateTime.now())
+                .build();
+        bindInviteRedisService.saveResponseRecord(responseRecord);
+
+        // 删除邀请记录
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId());
+
+        // 发送WebSocket消息通知邀请发起人
+        LoverBindMessage rejectMessage = LoverBindMessage.builder()
+                .fromUserId(currentUser.getId())
+                .fromUserName(currentUser.getUserName())
+                .link(null)
+                .build();
+        WSMessage<LoverBindMessage> wsMessage = WSMessage.<LoverBindMessage>builder()
+                .messageType(WSMessageType.BIND_REJECT)
+                .message(rejectMessage)
+                .build();
+        
+        try {
+            commonMessageWebSocketHandler.sendMessage(invite.getFromUserId(), wsMessage);
+            log.info("发送拒绝绑定消息给用户: {}", invite.getFromUserId());
+        } catch (Exception e) {
+            log.error("发送拒绝绑定消息失败: {}", e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public BindInviteRecordDTO getBindInviteRecord() {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        if (currentUser == null) {
+            throw new LoginFail("用户未登录，无法查询绑定邀请记录");
+        }
+
+        // 查询当前用户收到的邀请记录
+        Optional<BindInviteRecord> inviteRecordOpt = bindInviteRedisService.getInviteRecord(currentUser.getId());
+        if (inviteRecordOpt.isPresent()) {
+            BindInviteRecord inviteRecord = inviteRecordOpt.get();
+            
+            // 构造返回DTO
+            return BindInviteRecordDTO.builder()
+                    .fromUserId(inviteRecord.getFromUserId())
+                    .fromUserName(inviteRecord.getFromUserName())
+                    .link(inviteRecord.getLink())
+                    .createTime(inviteRecord.getCreateTime())
+                    .hasResponse(false)
+                    .accepted(null)
+                    .build();
+        }
+
+        // 如果没有收到邀请，返回null
+        return null;
     }
 }

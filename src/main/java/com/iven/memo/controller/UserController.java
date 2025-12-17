@@ -110,4 +110,14 @@ class UserController {
         userService.rejectBindLover(link);
         return ResponseMessage.success("伴侣绑定邀请已拒绝");
     }
+
+    /**
+     * 获取绑定邀请记录
+     * @return 绑定邀请记录（如果有的话）
+     */
+    @GetMapping("/lover/invite")
+    public ResponseMessage<com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO> getBindInviteRecord() {
+        com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO record = userService.getBindInviteRecord();
+        return ResponseMessage.success(record);
+    }
 }
