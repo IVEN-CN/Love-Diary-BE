@@ -306,22 +306,7 @@ public class UserServiceImpl implements UserService {
         bindInviteRedisService.deleteInviteRecord(currentUser.getId());
 
         // 发送WebSocket消息通知邀请发起人
-        LoverBindMessage acceptMessage = LoverBindMessage.builder()
-                .fromUserId(currentUser.getId())
-                .fromUserName(currentUser.getUserName())
-                .link(null)
-                .build();
-        WSMessage<LoverBindMessage> wsMessage = WSMessage.<LoverBindMessage>builder()
-                .messageType(WSMessageType.BIND_ACCEPT)
-                .message(acceptMessage)
-                .build();
-        
-        try {
-            commonMessageWebSocketHandler.sendMessage(invite.getFromUserId(), wsMessage);
-            log.info("发送接受绑定消息给用户: {}", invite.getFromUserId());
-        } catch (Exception e) {
-            log.error("发送接受绑定消息失败: {}", e.getMessage(), e);
-        }
+        sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_ACCEPT);
     }
 
     @Override
@@ -339,14 +324,15 @@ public class UserServiceImpl implements UserService {
             throw new DataNotFound("绑定邀请不存在或已过期");
         }
 
-        // 将邀请码设置为已使用
-        inviteMapper.useInvite(inviteId);
-
-        // 获取邀请详情
         BindInvite invite = inviteOptional.get();
+        
+        // 验证权限
         if (!invite.getToUserId().equals(currentUser.getId())) {
             throw new PermissionDeny("绑定邀请的接收用户与当前用户不匹配");
         }
+        
+        // 将邀请码设置为已使用
+        inviteMapper.useInvite(inviteId);
 
         // 保存响应记录到Redis（7天过期）
         BindResponseRecord responseRecord = BindResponseRecord.builder()
@@ -362,31 +348,39 @@ public class UserServiceImpl implements UserService {
         bindInviteRedisService.deleteInviteRecord(currentUser.getId());
 
         // 发送WebSocket消息通知邀请发起人
-        LoverBindMessage rejectMessage = LoverBindMessage.builder()
-                .fromUserId(currentUser.getId())
-                .fromUserName(currentUser.getUserName())
+        sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_REJECT);
+    }
+
+    /**
+     * 发送绑定响应WebSocket消息的辅助方法
+     * @param targetUserId 目标用户ID
+     * @param responseUser 响应用户
+     * @param messageType 消息类型（BIND_ACCEPT或BIND_REJECT）
+     */
+    private void sendBindResponseMessage(Long targetUserId, User responseUser, WSMessageType messageType) {
+        LoverBindMessage message = LoverBindMessage.builder()
+                .fromUserId(responseUser.getId())
+                .fromUserName(responseUser.getUserName())
                 .link(null)
                 .build();
         WSMessage<LoverBindMessage> wsMessage = WSMessage.<LoverBindMessage>builder()
-                .messageType(WSMessageType.BIND_REJECT)
-                .message(rejectMessage)
+                .messageType(messageType)
+                .message(message)
                 .build();
         
         try {
-            commonMessageWebSocketHandler.sendMessage(invite.getFromUserId(), wsMessage);
-            log.info("发送拒绝绑定消息给用户: {}", invite.getFromUserId());
+            commonMessageWebSocketHandler.sendMessage(targetUserId, wsMessage);
+            log.info("发送{}消息给用户: {}", messageType, targetUserId);
         } catch (Exception e) {
-            log.error("发送拒绝绑定消息失败: {}", e.getMessage(), e);
+            log.error("发送{}消息失败: {}", messageType, e.getMessage(), e);
         }
     }
 
     @Override
     public BindInviteRecordDTO getBindInviteRecord() {
         // 取出当前user
-        User currentUser = (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
-        if (currentUser == null) {
-            throw new LoginFail("用户未登录，无法查询绑定邀请记录");
-        }
+        User currentUser = (User) Objects.requireNonNull(
+                SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
 
         // 查询当前用户收到的邀请记录
         Optional<BindInviteRecord> inviteRecordOpt = bindInviteRedisService.getInviteRecord(currentUser.getId());

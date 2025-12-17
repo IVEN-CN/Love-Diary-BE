@@ -34,10 +34,15 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     @Override
     public Optional<BindInviteRecord> getInviteRecord(Long toUserId) {
         String key = INVITE_KEY_PREFIX + toUserId;
-        Object value = redisTemplate.opsForValue().get(key);
-        if (value instanceof BindInviteRecord) {
-            log.info("从Redis获取邀请记录: key={}", key);
-            return Optional.of((BindInviteRecord) value);
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value != null) {
+                BindInviteRecord record = (BindInviteRecord) value;
+                log.info("从Redis获取邀请记录: key={}", key);
+                return Optional.of(record);
+            }
+        } catch (ClassCastException e) {
+            log.error("Redis值类型转换失败: key={}, error={}", key, e.getMessage());
         }
         log.info("Redis中未找到邀请记录: key={}", key);
         return Optional.empty();
@@ -60,10 +65,15 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     @Override
     public Optional<BindResponseRecord> getResponseRecord(Long fromUserId) {
         String key = RESPONSE_KEY_PREFIX + fromUserId;
-        Object value = redisTemplate.opsForValue().get(key);
-        if (value instanceof BindResponseRecord) {
-            log.info("从Redis获取响应记录: key={}", key);
-            return Optional.of((BindResponseRecord) value);
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value != null) {
+                BindResponseRecord record = (BindResponseRecord) value;
+                log.info("从Redis获取响应记录: key={}", key);
+                return Optional.of(record);
+            }
+        } catch (ClassCastException e) {
+            log.error("Redis值类型转换失败: key={}, error={}", key, e.getMessage());
         }
         log.info("Redis中未找到响应记录: key={}", key);
         return Optional.empty();
