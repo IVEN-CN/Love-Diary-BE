@@ -21,4 +21,6 @@ public class BindInvite {
     private LocalDateTime expireTime;       // 邀请码过期时间
     @Builder.Default
     private boolean used = false;           // 邀请是否已被使用
+    @Builder.Default
+    private boolean accept = false;         // 是否接受邀请
 }

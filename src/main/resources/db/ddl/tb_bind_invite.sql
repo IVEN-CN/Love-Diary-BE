@@ -1,12 +1,13 @@
 create table tb_bind_invite
 (
-    id           bigserial             not null
+    id           bigserial
         constraint tb_bind_invite_pk
             primary key,
     from_user_id bigint                not null,
     to_user_id   bigint                not null,
     expire_time  TIMESTAMP             not null,
-    used         boolean default false not null
+    used         boolean default false not null,
+    accept       boolean default false not null
 );
 
 comment on table tb_bind_invite is '情侣绑定邀请表';

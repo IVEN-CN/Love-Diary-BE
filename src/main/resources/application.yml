@@ -9,6 +9,11 @@ spring:
   profiles:
     active: @spring.profiles.active@
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 mybatis:
   mapper-locations: classpath*:mapper/*.xml
   type-aliases-package: com.iven.memo.models.DO
