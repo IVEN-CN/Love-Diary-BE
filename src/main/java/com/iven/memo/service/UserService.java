@@ -3,6 +3,8 @@ package com.iven.memo.service;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.User.*;
 
+import java.util.List;
+
 public interface UserService {
     UserTokenResponseDTO login(String username, String password);
 
@@ -57,8 +59,8 @@ public interface UserService {
     void rejectBindLover(String link);
 
     /**
-     * 获取绑定邀请记录
-     * @return 绑定邀请记录（包含响应状态）
+     * 获取绑定邀请记录列表
+     * @return 绑定邀请记录列表
      */
-    BindInviteRecordDTO getBindInviteRecord();
+    List<BindInviteRecordDTO> getBindInviteRecords();
 }

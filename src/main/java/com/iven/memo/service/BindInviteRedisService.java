@@ -3,6 +3,7 @@ package com.iven.memo.service;
 import com.iven.memo.models.Message.BindInviteRecord;
 import com.iven.memo.models.Message.BindResponseRecord;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,17 +17,18 @@ public interface BindInviteRedisService {
     void saveInviteRecord(BindInviteRecord record);
 
     /**
-     * 获取用户收到的邀请记录
+     * 获取用户收到的所有邀请记录
      * @param toUserId 被邀请用户ID
-     * @return 邀请记录
+     * @return 邀请记录列表
      */
-    Optional<BindInviteRecord> getInviteRecord(Long toUserId);
+    List<BindInviteRecord> getInviteRecords(Long toUserId);
 
     /**
-     * 删除邀请记录
+     * 删除特定的邀请记录
      * @param toUserId 被邀请用户ID
+     * @param fromUserId 邀请发起人用户ID
      */
-    void deleteInviteRecord(Long toUserId);
+    void deleteInviteRecord(Long toUserId, Long fromUserId);
 
     /**
      * 保存响应记录到Redis（7天过期）

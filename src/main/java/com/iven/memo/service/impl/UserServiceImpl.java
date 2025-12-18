@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -302,8 +303,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除邀请记录
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId());
+        // 删除该邀请记录（指定fromUserId）
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), invite.getFromUserId());
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_ACCEPT);
@@ -344,8 +345,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除邀请记录
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId());
+        // 删除该邀请记录（指定fromUserId）
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), invite.getFromUserId());
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_REJECT);
@@ -377,28 +378,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public BindInviteRecordDTO getBindInviteRecord() {
+    public List<BindInviteRecordDTO> getBindInviteRecords() {
         // 取出当前user
         User currentUser = (User) Objects.requireNonNull(
                 SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
 
-        // 查询当前用户收到的邀请记录
-        Optional<BindInviteRecord> inviteRecordOpt = bindInviteRedisService.getInviteRecord(currentUser.getId());
-        if (inviteRecordOpt.isPresent()) {
-            BindInviteRecord inviteRecord = inviteRecordOpt.get();
-            
-            // 构造返回DTO
-            return BindInviteRecordDTO.builder()
-                    .fromUserId(inviteRecord.getFromUserId())
-                    .fromUserName(inviteRecord.getFromUserName())
-                    .link(inviteRecord.getLink())
-                    .createTime(inviteRecord.getCreateTime())
-                    .hasResponse(false)
-                    .accepted(null)
-                    .build();
-        }
-
-        // 如果没有收到邀请，返回null
-        return null;
+        // 查询当前用户收到的所有邀请记录
+        List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
+        
+        // 转换为DTO列表
+        return inviteRecords.stream()
+                .map(inviteRecord -> BindInviteRecordDTO.builder()
+                        .fromUserId(inviteRecord.getFromUserId())
+                        .fromUserName(inviteRecord.getFromUserName())
+                        .link(inviteRecord.getLink())
+                        .createTime(inviteRecord.getCreateTime())
+                        .hasResponse(false)
+                        .accepted(null)
+                        .build())
+                .toList();
     }
 }

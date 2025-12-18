@@ -13,6 +13,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
 
 @RestController
@@ -113,12 +114,12 @@ class UserController {
     }
 
     /**
-     * 获取绑定邀请记录
-     * @return 绑定邀请记录（如果有的话）
+     * 获取绑定邀请记录列表
+     * @return 绑定邀请记录列表
      */
     @GetMapping("/lover/invite")
-    public ResponseMessage<BindInviteRecordDTO> getBindInviteRecord() {
-        BindInviteRecordDTO record = userService.getBindInviteRecord();
-        return ResponseMessage.success(record);
+    public ResponseMessage<List<BindInviteRecordDTO>> getBindInviteRecords() {
+        List<BindInviteRecordDTO> records = userService.getBindInviteRecords();
+        return ResponseMessage.success(records);
     }
 }
