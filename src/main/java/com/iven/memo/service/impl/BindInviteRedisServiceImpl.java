@@ -11,10 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -75,11 +72,8 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
             }
             
             // 按创建时间降序排序（最新的在前）
-            records.sort((r1, r2) -> {
-                if (r1.getCreateTime() == null) return 1;
-                if (r2.getCreateTime() == null) return -1;
-                return r2.getCreateTime().compareTo(r1.getCreateTime());
-            });
+            records.sort(Comparator.comparing(BindInviteRecord::getCreateTime, 
+                    Comparator.nullsLast(Comparator.reverseOrder())));
             
             log.info("从Redis获取邀请记录列表: key={}, count={}", key, records.size());
         } catch (Exception e) {
@@ -92,9 +86,8 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     @Override
     public void deleteInviteRecord(Long toUserId, String link) {
         String key = INVITES_KEY_PREFIX + toUserId;
-        String hashKey = link; // 使用link作为hash key
-        redisTemplate.opsForHash().delete(key, hashKey);
-        log.info("从Redis删除邀请记录: key={}, hashKey={}", key, hashKey);
+        redisTemplate.opsForHash().delete(key, link);
+        log.info("从Redis删除邀请记录: key={}, hashKey={}", key, link);
     }
 
     @Override
