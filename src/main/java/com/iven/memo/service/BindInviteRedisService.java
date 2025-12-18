@@ -26,9 +26,9 @@ public interface BindInviteRedisService {
     /**
      * 删除特定的邀请记录
      * @param toUserId 被邀请用户ID
-     * @param fromUserId 邀请发起人用户ID
+     * @param link 邀请短链（唯一标识）
      */
-    void deleteInviteRecord(Long toUserId, Long fromUserId);
+    void deleteInviteRecord(Long toUserId, String link);
 
     /**
      * 保存响应记录到Redis（7天过期）
