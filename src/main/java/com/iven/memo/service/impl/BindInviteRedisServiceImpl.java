@@ -35,7 +35,7 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     @Override
     public void saveInviteRecord(BindInviteRecord record) {
         String key = INVITES_KEY_PREFIX + record.getToUserId();
-        String hashKey = String.valueOf(record.getFromUserId());
+        String hashKey = record.getLink(); // 使用link作为hash key，确保每个邀请都是唯一的
         
         // 存储到Hash中
         redisTemplate.opsForHash().put(key, hashKey, record);
@@ -74,6 +74,13 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
                 }
             }
             
+            // 按创建时间降序排序（最新的在前）
+            records.sort((r1, r2) -> {
+                if (r1.getCreateTime() == null) return 1;
+                if (r2.getCreateTime() == null) return -1;
+                return r2.getCreateTime().compareTo(r1.getCreateTime());
+            });
+            
             log.info("从Redis获取邀请记录列表: key={}, count={}", key, records.size());
         } catch (Exception e) {
             log.error("获取邀请记录失败: key={}, error={}", key, e.getMessage());
@@ -83,9 +90,9 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     }
 
     @Override
-    public void deleteInviteRecord(Long toUserId, Long fromUserId) {
+    public void deleteInviteRecord(Long toUserId, String link) {
         String key = INVITES_KEY_PREFIX + toUserId;
-        String hashKey = String.valueOf(fromUserId);
+        String hashKey = link; // 使用link作为hash key
         redisTemplate.opsForHash().delete(key, hashKey);
         log.info("从Redis删除邀请记录: key={}, hashKey={}", key, hashKey);
     }

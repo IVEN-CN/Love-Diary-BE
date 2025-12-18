@@ -303,8 +303,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除该邀请记录（指定fromUserId）
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), invite.getFromUserId());
+        // 删除该邀请记录（使用link唯一标识）
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_ACCEPT);
@@ -345,8 +345,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除该邀请记录（指定fromUserId）
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), invite.getFromUserId());
+        // 删除该邀请记录（使用link唯一标识）
+        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_REJECT);
