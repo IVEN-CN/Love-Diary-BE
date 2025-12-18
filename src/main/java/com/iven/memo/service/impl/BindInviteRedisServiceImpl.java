@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -23,6 +24,7 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     
     // 7天过期时间
     private static final Duration EXPIRE_DURATION = Duration.ofDays(7);
+    private final ObjectMapper objectMapper;
 
     @Override
     public void saveInviteRecord(BindInviteRecord record) {
@@ -37,7 +39,7 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
         try {
             Object value = redisTemplate.opsForValue().get(key);
             if (value != null) {
-                BindInviteRecord record = (BindInviteRecord) value;
+                BindInviteRecord record = objectMapper.convertValue(value, BindInviteRecord.class);
                 log.info("从Redis获取邀请记录: key={}", key);
                 return Optional.of(record);
             }
