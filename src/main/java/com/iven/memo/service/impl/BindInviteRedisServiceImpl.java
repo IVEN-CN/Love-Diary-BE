@@ -27,8 +27,9 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     private static final String INVITES_KEY_PREFIX = "bind:invites:to:";
     private static final String RESPONSE_KEY_PREFIX = "bind:response:to:";
     
-    // 7天过期时间（秒）
-    private static final long EXPIRE_SECONDS = 7 * 24 * 60 * 60;
+    // 过期时间常量
+    private static final int EXPIRE_DAYS = 7;
+    private static final long EXPIRE_SECONDS = EXPIRE_DAYS * 24 * 60 * 60;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -58,9 +59,9 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
                 try {
                     BindInviteRecord record = objectMapper.convertValue(entry.getValue(), BindInviteRecord.class);
                     
-                    // 检查是否过期（7天）
+                    // 检查是否过期
                     if (record.getCreateTime() != null && 
-                        record.getCreateTime().plusDays(7).isAfter(now)) {
+                        record.getCreateTime().plusDays(EXPIRE_DAYS).isAfter(now)) {
                         records.add(record);
                     } else {
                         // 删除已过期的记录
@@ -68,7 +69,7 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
                         redisTemplate.opsForHash().delete(key, hashKey);
                         log.info("删除过期的邀请记录: key={}, hashKey={}", key, hashKey);
                     }
-                } catch (Exception e) {
+                } catch (IllegalArgumentException e) {
                     log.error("解析邀请记录失败: key={}, error={}", key, e.getMessage());
                 }
             }
