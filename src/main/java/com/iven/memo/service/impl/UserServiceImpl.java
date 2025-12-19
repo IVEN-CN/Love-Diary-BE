@@ -44,6 +44,10 @@ public class UserServiceImpl implements UserService {
     private final BindInviteMapper inviteMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final BindInviteRedisService bindInviteRedisService;
+    
+    // 消息类型常量
+    private static final String MESSAGE_TYPE_INVITE = "INVITE";
+    private static final String MESSAGE_TYPE_RESPONSE = "RESPONSE";
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -464,7 +468,7 @@ public class UserServiceImpl implements UserService {
                 );
             
             UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
-                    .messageType("INVITE")
+                    .messageType(MESSAGE_TYPE_INVITE)
                     .fromUserId(inviteRecord.getFromUserId())
                     .fromUserName(inviteRecord.getFromUserName())
                     .link(inviteRecord.getLink())
@@ -479,7 +483,7 @@ public class UserServiceImpl implements UserService {
         List<BindResponseRecord> responseRecords = bindInviteRedisService.getResponseRecords(currentUser.getId());
         for (BindResponseRecord responseRecord : responseRecords) {
             UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
-                    .messageType("RESPONSE")
+                    .messageType(MESSAGE_TYPE_RESPONSE)
                     .responseUserId(responseRecord.getResponseUserId())
                     .responseUserName(responseRecord.getResponseUserName())
                     .link(responseRecord.getLink())
