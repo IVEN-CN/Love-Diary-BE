@@ -381,6 +381,27 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 将邀请记录转换为DTO，并检查响应状态
+     */
+    private BindInviteRecordDTO convertToInviteDTO(BindInviteRecord inviteRecord) {
+        // 检查该邀请是否有响应记录
+        Optional<BindResponseRecord> responseOpt = 
+            bindInviteRedisService.getResponseRecordByLink(
+                inviteRecord.getFromUserId(), 
+                inviteRecord.getLink()
+            );
+        
+        return BindInviteRecordDTO.builder()
+                .fromUserId(inviteRecord.getFromUserId())
+                .fromUserName(inviteRecord.getFromUserName())
+                .link(inviteRecord.getLink())
+                .createTime(inviteRecord.getCreateTime())
+                .hasResponse(responseOpt.isPresent())
+                .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
+                .build();
+    }
+
     @Override
     public List<BindInviteRecordDTO> getBindInviteRecords() {
         // 取出当前user
@@ -390,25 +411,9 @@ public class UserServiceImpl implements UserService {
         // 查询当前用户收到的所有邀请记录
         List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
         
-        // 转换为DTO列表，并检查响应状态
+        // 转换为DTO列表
         return inviteRecords.stream()
-                .map(inviteRecord -> {
-                    // 检查该邀请是否有响应记录（被邀请人查看发起人的响应）
-                    Optional<BindResponseRecord> responseOpt = 
-                        bindInviteRedisService.getResponseRecordByLink(
-                            inviteRecord.getFromUserId(), 
-                            inviteRecord.getLink()
-                        );
-                    
-                    return BindInviteRecordDTO.builder()
-                            .fromUserId(inviteRecord.getFromUserId())
-                            .fromUserName(inviteRecord.getFromUserName())
-                            .link(inviteRecord.getLink())
-                            .createTime(inviteRecord.getCreateTime())
-                            .hasResponse(responseOpt.isPresent())
-                            .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
-                            .build();
-                })
+                .map(this::convertToInviteDTO)
                 .toList();
     }
 
@@ -421,23 +426,7 @@ public class UserServiceImpl implements UserService {
         // 获取邀请消息（当前用户作为被邀请人收到的邀请）
         List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
         List<BindInviteRecordDTO> inviteMessages = inviteRecords.stream()
-                .map(inviteRecord -> {
-                    // 检查该邀请是否有响应记录
-                    Optional<BindResponseRecord> responseOpt = 
-                        bindInviteRedisService.getResponseRecordByLink(
-                            inviteRecord.getFromUserId(), 
-                            inviteRecord.getLink()
-                        );
-                    
-                    return BindInviteRecordDTO.builder()
-                            .fromUserId(inviteRecord.getFromUserId())
-                            .fromUserName(inviteRecord.getFromUserName())
-                            .link(inviteRecord.getLink())
-                            .createTime(inviteRecord.getCreateTime())
-                            .hasResponse(responseOpt.isPresent())
-                            .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
-                            .build();
-                })
+                .map(this::convertToInviteDTO)
                 .toList();
 
         // 获取响应消息（当前用户作为邀请发起人收到的响应）
