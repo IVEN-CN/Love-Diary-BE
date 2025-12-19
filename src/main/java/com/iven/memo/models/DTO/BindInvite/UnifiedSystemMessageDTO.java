@@ -1,5 +1,6 @@
 package com.iven.memo.models.DTO.BindInvite;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.iven.memo.models.Enumerate.SystemMessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +29,7 @@ public class UnifiedSystemMessageDTO {
     
     // 公共字段
     private String link;                // 邀请短链
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime time;         // 消息时间（邀请创建时间或响应时间）
     
     // 状态字段
