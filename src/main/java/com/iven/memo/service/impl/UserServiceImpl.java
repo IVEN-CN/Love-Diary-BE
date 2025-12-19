@@ -13,6 +13,7 @@ import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
 import com.iven.memo.models.DTO.BindInvite.UnifiedSystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Enumerate.BindType;
+import com.iven.memo.models.Enumerate.SystemMessageType;
 import com.iven.memo.models.Enumerate.WSMessageType;
 import com.iven.memo.models.Message.BindInviteRecord;
 import com.iven.memo.models.Message.BindResponseRecord;
@@ -44,10 +45,6 @@ public class UserServiceImpl implements UserService {
     private final BindInviteMapper inviteMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final BindInviteRedisService bindInviteRedisService;
-    
-    // 消息类型常量
-    private static final String MESSAGE_TYPE_INVITE = "INVITE";
-    private static final String MESSAGE_TYPE_RESPONSE = "RESPONSE";
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -490,7 +487,7 @@ public class UserServiceImpl implements UserService {
                 );
             
             UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
-                    .messageType(MESSAGE_TYPE_INVITE)
+                    .messageType(SystemMessageType.INVITE)
                     .fromUserId(inviteRecord.getFromUserId())
                     .fromUserName(inviteRecord.getFromUserName())
                     .link(inviteRecord.getLink())
@@ -505,7 +502,7 @@ public class UserServiceImpl implements UserService {
         List<BindResponseRecord> responseRecords = bindInviteRedisService.getResponseRecords(currentUser.getId());
         for (BindResponseRecord responseRecord : responseRecords) {
             UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
-                    .messageType(MESSAGE_TYPE_RESPONSE)
+                    .messageType(SystemMessageType.RESPONSE)
                     .responseUserId(responseRecord.getResponseUserId())
                     .responseUserName(responseRecord.getResponseUserName())
                     .link(responseRecord.getLink())

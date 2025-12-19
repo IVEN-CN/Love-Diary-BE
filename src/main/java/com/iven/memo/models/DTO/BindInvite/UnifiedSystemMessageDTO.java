@@ -1,5 +1,6 @@
 package com.iven.memo.models.DTO.BindInvite;
 
+import com.iven.memo.models.Enumerate.SystemMessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class UnifiedSystemMessageDTO {
-    private String messageType;         // 消息类型：INVITE（邀请消息）或 RESPONSE（响应消息）
+    private SystemMessageType messageType;  // 消息类型：INVITE（邀请消息）或 RESPONSE（响应消息）
     
     // 邀请消息字段
     private Long fromUserId;            // 发起邀请的用户ID

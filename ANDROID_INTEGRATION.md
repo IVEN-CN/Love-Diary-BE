@@ -82,10 +82,19 @@ data class ApiResponse<T>(
     val message: String?
 )
 
+// 系统消息类型枚举（与后端保持一致）
+enum class SystemMessageType {
+    @SerializedName("INVITE")
+    INVITE,      // 邀请消息
+    
+    @SerializedName("RESPONSE")
+    RESPONSE     // 响应消息
+}
+
 // 统一系统消息
 data class UnifiedSystemMessage(
     @SerializedName("messageType")
-    val messageType: String, // "INVITE" 或 "RESPONSE"
+    val messageType: SystemMessageType, // 使用枚举类型
     
     // 邀请消息字段
     @SerializedName("fromUserId")
@@ -116,30 +125,28 @@ data class UnifiedSystemMessage(
     val accepted: Boolean?
 ) {
     // 辅助方法：判断是否为邀请消息
-    fun isInviteMessage(): Boolean = messageType == "INVITE"
+    fun isInviteMessage(): Boolean = messageType == SystemMessageType.INVITE
     
     // 辅助方法：判断是否为响应消息
-    fun isResponseMessage(): Boolean = messageType == "RESPONSE"
+    fun isResponseMessage(): Boolean = messageType == SystemMessageType.RESPONSE
     
     // 辅助方法：获取显示名称
     fun getDisplayName(): String {
         return when (messageType) {
-            "INVITE" -> fromUserName ?: "未知用户"
-            "RESPONSE" -> responseUserName ?: "未知用户"
-            else -> "未知"
+            SystemMessageType.INVITE -> fromUserName ?: "未知用户"
+            SystemMessageType.RESPONSE -> responseUserName ?: "未知用户"
         }
     }
     
     // 辅助方法：获取状态描述
     fun getStatusText(): String {
         return when (messageType) {
-            "INVITE" -> when {
+            SystemMessageType.INVITE -> when {
                 hasResponse == true && accepted == true -> "已接受"
                 hasResponse == true && accepted == false -> "已拒绝"
                 else -> "待响应"
             }
-            "RESPONSE" -> if (accepted == true) "接受了邀请" else "拒绝了邀请"
-            else -> "未知状态"
+            SystemMessageType.RESPONSE -> if (accepted == true) "接受了邀请" else "拒绝了邀请"
         }
     }
 }
@@ -163,10 +170,20 @@ data class ApiResponse<T>(
     val message: String? = null
 )
 
+// 系统消息类型枚举
+@Serializable
+enum class SystemMessageType {
+    @SerialName("INVITE")
+    INVITE,
+    
+    @SerialName("RESPONSE")
+    RESPONSE
+}
+
 @Serializable
 data class UnifiedSystemMessage(
     @SerialName("messageType")
-    val messageType: String,
+    val messageType: SystemMessageType,
     
     @SerialName("fromUserId")
     val fromUserId: Long? = null,
