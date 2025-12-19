@@ -275,7 +275,10 @@ public class UserServiceImpl implements UserService {
             throw new PermissionDeny("绑定邀请的接收用户与当前用户不匹配");
         }
         // 使用邀请码
-        inviteMapper.useInvite(inviteId);
+        int influence = inviteMapper.acceptInvite(inviteId);
+        if (influence <= 0) {
+            throw new GlobalException("接受伴侣绑定时，使用邀请码失败，mybatis影响行数为0");
+        }
 
         // 取出lover
         Optional<User> loverOptional = userMapper.findById(invite.getFromUserId());
@@ -313,6 +316,19 @@ public class UserServiceImpl implements UserService {
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_ACCEPT);
+
+        // 拒绝其他的未处理邀请
+        // XXX 可以改为异步处理
+        List<BindInvite> otherInvites = inviteMapper.findAllUnusedByToUserId(currentUser.getId());
+        for (BindInvite otherInvite : otherInvites) {
+            if (!otherInvite.getFromUserId().equals(invite.getFromUserId())) {
+                // 如果找出来的邀请不是当前接受的邀请的发起人发起的，就拒绝掉
+                rejectBindLover(currentUser, Base62Utils.encode(otherInvite.getId()));
+            } else {
+                // 如果是当前接受的邀请的发起人发起的，就设置为已使用，避免重复使用
+                inviteMapper.useInvite(otherInvite.getId());
+            }
+        }
     }
 
     @Override
@@ -322,7 +338,10 @@ public class UserServiceImpl implements UserService {
         if (currentUser == null) {
             throw new LoginFail("用户未登录，无法解绑伴侣");
         }
+        rejectBindLover(currentUser, link);
+    }
 
+    private void rejectBindLover(User currentUser, String link) {
         // 找出邀请码
         Long inviteId = Base62Utils.decode(link);
         Optional<BindInvite> inviteOptional = inviteMapper.findById(inviteId);
@@ -338,7 +357,10 @@ public class UserServiceImpl implements UserService {
         }
         
         // 将邀请码设置为已使用
-        inviteMapper.useInvite(inviteId);
+        int influence = inviteMapper.rejectInvite(inviteId);
+        if (influence <= 0) {
+            throw new GlobalException("拒绝伴侣绑定时，使用邀请码失败，mybatis影响行数为0");
+        }
 
         // 保存响应记录到Redis（7天过期）
         BindResponseRecord responseRecord = BindResponseRecord.builder()
