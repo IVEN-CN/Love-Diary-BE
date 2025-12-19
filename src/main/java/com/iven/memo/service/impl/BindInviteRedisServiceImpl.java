@@ -93,31 +93,70 @@ public class BindInviteRedisServiceImpl implements BindInviteRedisService {
     @Override
     public void saveResponseRecord(BindResponseRecord record) {
         String key = RESPONSE_KEY_PREFIX + record.getFromUserId();
-        redisTemplate.opsForValue().set(key, record, EXPIRE_SECONDS, TimeUnit.SECONDS);
-        log.info("保存响应记录到Redis: key={}, record={}", key, record);
+        String hashKey = record.getLink(); // 使用link作为hash key
+        
+        // 存储到Hash中
+        redisTemplate.opsForHash().put(key, hashKey, record);
+        
+        // 设置整个Hash的过期时间为7天
+        redisTemplate.expire(key, EXPIRE_SECONDS, TimeUnit.SECONDS);
+        
+        log.info("保存响应记录到Redis: key={}, hashKey={}, record={}", key, hashKey, record);
     }
 
     @Override
-    public Optional<BindResponseRecord> getResponseRecord(Long fromUserId) {
+    public List<BindResponseRecord> getResponseRecords(Long fromUserId) {
+        String key = RESPONSE_KEY_PREFIX + fromUserId;
+        List<BindResponseRecord> records = new ArrayList<>();
+        
+        try {
+            Map<Object, Object> allResponses = redisTemplate.opsForHash().entries(key);
+            LocalDateTime now = LocalDateTime.now();
+            
+            for (Map.Entry<Object, Object> entry : allResponses.entrySet()) {
+                try {
+                    BindResponseRecord record = objectMapper.convertValue(entry.getValue(), BindResponseRecord.class);
+                    
+                    // 检查是否过期
+                    if (record.getResponseTime() != null && 
+                        record.getResponseTime().plusDays(EXPIRE_DAYS).isAfter(now)) {
+                        records.add(record);
+                    } else {
+                        // 删除已过期的记录
+                        String hashKey = entry.getKey().toString();
+                        redisTemplate.opsForHash().delete(key, hashKey);
+                        log.info("删除过期的响应记录: key={}, hashKey={}", key, hashKey);
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.error("解析响应记录失败: key={}, error={}", key, e.getMessage());
+                }
+            }
+            
+            // 按响应时间降序排序（最新的在前）
+            records.sort(Comparator.comparing(BindResponseRecord::getResponseTime, 
+                    Comparator.nullsLast(Comparator.reverseOrder())));
+            
+            log.info("从Redis获取响应记录列表: key={}, count={}", key, records.size());
+        } catch (Exception e) {
+            log.error("获取响应记录失败: key={}, error={}", key, e.getMessage());
+        }
+        
+        return records;
+    }
+
+    @Override
+    public Optional<BindResponseRecord> getResponseRecordByLink(Long fromUserId, String link) {
         String key = RESPONSE_KEY_PREFIX + fromUserId;
         try {
-            Object value = redisTemplate.opsForValue().get(key);
+            Object value = redisTemplate.opsForHash().get(key, link);
             if (value != null) {
-                BindResponseRecord record = (BindResponseRecord) value;
-                log.info("从Redis获取响应记录: key={}", key);
+                BindResponseRecord record = objectMapper.convertValue(value, BindResponseRecord.class);
+                log.info("从Redis获取响应记录: key={}, link={}", key, link);
                 return Optional.of(record);
             }
-        } catch (ClassCastException e) {
-            log.error("Redis值类型转换失败: key={}, error={}", key, e.getMessage());
+        } catch (Exception e) {
+            log.error("获取响应记录失败: key={}, link={}, error={}", key, link, e.getMessage());
         }
-        log.info("Redis中未找到响应记录: key={}", key);
         return Optional.empty();
-    }
-
-    @Override
-    public void deleteResponseRecord(Long fromUserId) {
-        String key = RESPONSE_KEY_PREFIX + fromUserId;
-        redisTemplate.delete(key);
-        log.info("从Redis删除响应记录: key={}", key);
     }
 }

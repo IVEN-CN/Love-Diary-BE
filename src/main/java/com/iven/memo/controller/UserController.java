@@ -3,6 +3,7 @@ package com.iven.memo.controller;
 import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
+import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
@@ -121,5 +122,15 @@ class UserController {
     public ResponseMessage<List<BindInviteRecordDTO>> getBindInviteRecords() {
         List<BindInviteRecordDTO> records = userService.getBindInviteRecords();
         return ResponseMessage.success(records);
+    }
+
+    /**
+     * 获取系统消息（包括邀请消息和响应消息）
+     * @return 系统消息DTO
+     */
+    @GetMapping("/lover/messages")
+    public ResponseMessage<SystemMessageDTO> getSystemMessages() {
+        SystemMessageDTO messages = userService.getSystemMessages();
+        return ResponseMessage.success(messages);
     }
 }

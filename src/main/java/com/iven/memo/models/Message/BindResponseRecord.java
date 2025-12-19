@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 public class BindResponseRecord implements Serializable {
     private Long fromUserId;            // 原始邀请发起人的用户ID
+    private String link;                // 邀请短链（用于标识哪个邀请被响应）
     private Long responseUserId;        // 响应用户ID（接受或拒绝邀请的用户）
     private String responseUserName;    // 响应用户名
     private boolean accepted;           // 是否接受邀请（true=接受，false=拒绝）

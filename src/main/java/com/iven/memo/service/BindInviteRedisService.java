@@ -37,15 +37,17 @@ public interface BindInviteRedisService {
     void saveResponseRecord(BindResponseRecord record);
 
     /**
-     * 获取用户发出邀请的响应记录
+     * 获取用户发出邀请的所有响应记录
      * @param fromUserId 邀请发起人用户ID
-     * @return 响应记录
+     * @return 响应记录列表
      */
-    Optional<BindResponseRecord> getResponseRecord(Long fromUserId);
+    List<BindResponseRecord> getResponseRecords(Long fromUserId);
 
     /**
-     * 删除响应记录
+     * 根据link获取响应记录
      * @param fromUserId 邀请发起人用户ID
+     * @param link 邀请短链
+     * @return 响应记录
      */
-    void deleteResponseRecord(Long fromUserId);
+    Optional<BindResponseRecord> getResponseRecordByLink(Long fromUserId, String link);
 }
