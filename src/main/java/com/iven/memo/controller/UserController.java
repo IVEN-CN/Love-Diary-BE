@@ -4,6 +4,7 @@ import com.iven.memo.exceptions.LoginFail;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
+import com.iven.memo.models.DTO.BindInvite.UnifiedSystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Message.ResponseMessage;
 import com.iven.memo.service.UserService;
@@ -131,6 +132,16 @@ class UserController {
     @GetMapping("/lover/messages")
     public ResponseMessage<SystemMessageDTO> getSystemMessages() {
         SystemMessageDTO messages = userService.getSystemMessages();
+        return ResponseMessage.success(messages);
+    }
+
+    /**
+     * 获取统一的系统消息列表（邀请消息和响应消息合并，按时间排序）
+     * @return 统一系统消息列表
+     */
+    @GetMapping("/lover/messages/unified")
+    public ResponseMessage<List<UnifiedSystemMessageDTO>> getUnifiedSystemMessages() {
+        List<UnifiedSystemMessageDTO> messages = userService.getUnifiedSystemMessages();
         return ResponseMessage.success(messages);
     }
 }

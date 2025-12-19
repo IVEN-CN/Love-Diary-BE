@@ -10,6 +10,7 @@ import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRequest;
 import com.iven.memo.models.DTO.BindInvite.BindResponseRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
+import com.iven.memo.models.DTO.BindInvite.UnifiedSystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Enumerate.BindType;
 import com.iven.memo.models.Enumerate.WSMessageType;
@@ -31,10 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -445,5 +443,56 @@ public class UserServiceImpl implements UserService {
                 .inviteMessages(inviteMessages)
                 .responseMessages(responseMessages)
                 .build();
+    }
+
+    @Override
+    public List<UnifiedSystemMessageDTO> getUnifiedSystemMessages() {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(
+                SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+
+        List<UnifiedSystemMessageDTO> allMessages = new ArrayList<>();
+
+        // 获取邀请消息（当前用户作为被邀请人收到的邀请）
+        List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
+        for (BindInviteRecord inviteRecord : inviteRecords) {
+            // 检查该邀请是否有响应记录
+            Optional<BindResponseRecord> responseOpt = 
+                bindInviteRedisService.getResponseRecordByLink(
+                    inviteRecord.getFromUserId(), 
+                    inviteRecord.getLink()
+                );
+            
+            UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
+                    .messageType("INVITE")
+                    .fromUserId(inviteRecord.getFromUserId())
+                    .fromUserName(inviteRecord.getFromUserName())
+                    .link(inviteRecord.getLink())
+                    .time(inviteRecord.getCreateTime())
+                    .hasResponse(responseOpt.isPresent())
+                    .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
+                    .build();
+            allMessages.add(message);
+        }
+
+        // 获取响应消息（当前用户作为邀请发起人收到的响应）
+        List<BindResponseRecord> responseRecords = bindInviteRedisService.getResponseRecords(currentUser.getId());
+        for (BindResponseRecord responseRecord : responseRecords) {
+            UnifiedSystemMessageDTO message = UnifiedSystemMessageDTO.builder()
+                    .messageType("RESPONSE")
+                    .responseUserId(responseRecord.getResponseUserId())
+                    .responseUserName(responseRecord.getResponseUserName())
+                    .link(responseRecord.getLink())
+                    .time(responseRecord.getResponseTime())
+                    .accepted(responseRecord.isAccepted())
+                    .build();
+            allMessages.add(message);
+        }
+
+        // 按时间降序排序（最新的在前）
+        allMessages.sort(Comparator.comparing(UnifiedSystemMessageDTO::getTime, 
+                Comparator.nullsLast(Comparator.reverseOrder())));
+
+        return allMessages;
     }
 }
