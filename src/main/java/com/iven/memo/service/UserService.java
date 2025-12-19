@@ -2,6 +2,7 @@ package com.iven.memo.service;
 
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
+import com.iven.memo.models.DTO.BindInvite.UnifiedSystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 
 import java.util.List;
@@ -70,4 +71,10 @@ public interface UserService {
      * @return 系统消息DTO
      */
     SystemMessageDTO getSystemMessages();
+
+    /**
+     * 获取统一的系统消息列表（邀请消息和响应消息合并，按时间排序）
+     * @return 统一系统消息列表
+     */
+    List<UnifiedSystemMessageDTO> getUnifiedSystemMessages();
 }
