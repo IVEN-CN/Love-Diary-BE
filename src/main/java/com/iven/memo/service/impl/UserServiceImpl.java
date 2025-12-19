@@ -8,6 +8,8 @@ import com.iven.memo.models.DO.BindInvite;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRequest;
+import com.iven.memo.models.DTO.BindInvite.BindResponseRecordDTO;
+import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 import com.iven.memo.models.Enumerate.BindType;
 import com.iven.memo.models.Enumerate.WSMessageType;
@@ -296,6 +298,7 @@ public class UserServiceImpl implements UserService {
         // 保存响应记录到Redis（7天过期）
         BindResponseRecord responseRecord = BindResponseRecord.builder()
                 .fromUserId(invite.getFromUserId())
+                .link(link)  // 添加link用于标识是哪个邀请被响应
                 .responseUserId(currentUser.getId())
                 .responseUserName(currentUser.getUserName())
                 .accepted(true)
@@ -303,8 +306,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除该邀请记录（使用link唯一标识）
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
+        // 不删除邀请记录，保留供被邀请人查看响应状态
+        // bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_ACCEPT);
@@ -338,6 +341,7 @@ public class UserServiceImpl implements UserService {
         // 保存响应记录到Redis（7天过期）
         BindResponseRecord responseRecord = BindResponseRecord.builder()
                 .fromUserId(invite.getFromUserId())
+                .link(link)  // 添加link用于标识是哪个邀请被响应
                 .responseUserId(currentUser.getId())
                 .responseUserName(currentUser.getUserName())
                 .accepted(false)
@@ -345,8 +349,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         bindInviteRedisService.saveResponseRecord(responseRecord);
 
-        // 删除该邀请记录（使用link唯一标识）
-        bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
+        // 不删除邀请记录，保留供被邀请人查看响应状态
+        // bindInviteRedisService.deleteInviteRecord(currentUser.getId(), link);
 
         // 发送WebSocket消息通知邀请发起人
         sendBindResponseMessage(invite.getFromUserId(), currentUser, WSMessageType.BIND_REJECT);
@@ -386,16 +390,71 @@ public class UserServiceImpl implements UserService {
         // 查询当前用户收到的所有邀请记录
         List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
         
-        // 转换为DTO列表
+        // 转换为DTO列表，并检查响应状态
         return inviteRecords.stream()
-                .map(inviteRecord -> BindInviteRecordDTO.builder()
-                        .fromUserId(inviteRecord.getFromUserId())
-                        .fromUserName(inviteRecord.getFromUserName())
-                        .link(inviteRecord.getLink())
-                        .createTime(inviteRecord.getCreateTime())
-                        .hasResponse(false)
-                        .accepted(null)
+                .map(inviteRecord -> {
+                    // 检查该邀请是否有响应记录（被邀请人查看发起人的响应）
+                    Optional<BindResponseRecord> responseOpt = 
+                        bindInviteRedisService.getResponseRecordByLink(
+                            inviteRecord.getFromUserId(), 
+                            inviteRecord.getLink()
+                        );
+                    
+                    return BindInviteRecordDTO.builder()
+                            .fromUserId(inviteRecord.getFromUserId())
+                            .fromUserName(inviteRecord.getFromUserName())
+                            .link(inviteRecord.getLink())
+                            .createTime(inviteRecord.getCreateTime())
+                            .hasResponse(responseOpt.isPresent())
+                            .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
+                            .build();
+                })
+                .toList();
+    }
+
+    @Override
+    public SystemMessageDTO getSystemMessages() {
+        // 取出当前user
+        User currentUser = (User) Objects.requireNonNull(
+                SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+
+        // 获取邀请消息（当前用户作为被邀请人收到的邀请）
+        List<BindInviteRecord> inviteRecords = bindInviteRedisService.getInviteRecords(currentUser.getId());
+        List<BindInviteRecordDTO> inviteMessages = inviteRecords.stream()
+                .map(inviteRecord -> {
+                    // 检查该邀请是否有响应记录
+                    Optional<BindResponseRecord> responseOpt = 
+                        bindInviteRedisService.getResponseRecordByLink(
+                            inviteRecord.getFromUserId(), 
+                            inviteRecord.getLink()
+                        );
+                    
+                    return BindInviteRecordDTO.builder()
+                            .fromUserId(inviteRecord.getFromUserId())
+                            .fromUserName(inviteRecord.getFromUserName())
+                            .link(inviteRecord.getLink())
+                            .createTime(inviteRecord.getCreateTime())
+                            .hasResponse(responseOpt.isPresent())
+                            .accepted(responseOpt.map(BindResponseRecord::isAccepted).orElse(null))
+                            .build();
+                })
+                .toList();
+
+        // 获取响应消息（当前用户作为邀请发起人收到的响应）
+        List<BindResponseRecord> responseRecords = bindInviteRedisService.getResponseRecords(currentUser.getId());
+        List<BindResponseRecordDTO> responseMessages = responseRecords.stream()
+                .map(responseRecord -> BindResponseRecordDTO.builder()
+                        .responseUserId(responseRecord.getResponseUserId())
+                        .responseUserName(responseRecord.getResponseUserName())
+                        .link(responseRecord.getLink())
+                        .accepted(responseRecord.isAccepted())
+                        .responseTime(responseRecord.getResponseTime())
                         .build())
                 .toList();
+
+        return SystemMessageDTO.builder()
+                .inviteMessages(inviteMessages)
+                .responseMessages(responseMessages)
+                .build();
     }
 }

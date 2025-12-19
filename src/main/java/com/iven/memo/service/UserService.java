@@ -1,6 +1,7 @@
 package com.iven.memo.service;
 
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
+import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
 import com.iven.memo.models.DTO.User.*;
 
 import java.util.List;
@@ -63,4 +64,10 @@ public interface UserService {
      * @return 绑定邀请记录列表
      */
     List<BindInviteRecordDTO> getBindInviteRecords();
+
+    /**
+     * 获取系统消息（包括邀请消息和响应消息）
+     * @return 系统消息DTO
+     */
+    SystemMessageDTO getSystemMessages();
 }
