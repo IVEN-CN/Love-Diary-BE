@@ -7,7 +7,7 @@ create table tb_bind_invite
     to_user_id   bigint                not null,
     expire_time  TIMESTAMP             not null,
     used         boolean default false not null,
-    accept       boolean default false not null
+    accept       boolean
 );
 
 comment on table tb_bind_invite is '情侣绑定邀请表';
