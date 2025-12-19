@@ -29,6 +29,13 @@
         SELECT *
         FROM tb_bind_invite
     </select>
+    <select id="findAllUnusedByToUserId" resultMap="BindInviteResultMap">
+        SELECT *
+        FROM tb_bind_invite
+        WHERE to_user_id = #{toUserId}
+            AND used = false
+            AND expire_time > NOW()
+    </select>
 
     <!-- Delete by ID -->
     <delete id="deleteById">
@@ -40,6 +47,16 @@
     <update id="useInvite">
         UPDATE tb_bind_invite
         SET used = true
+        WHERE id = #{id}
+    </update>
+    <update id="acceptInvite">
+        UPDATE tb_bind_invite
+        SET accept=true, used = true
+        WHERE id = #{id}
+    </update>
+    <update id="rejectInvite">
+        UPDATE tb_bind_invite
+        SET accept=false, used = true
         WHERE id = #{id}
     </update>
 
