@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.iven.memo.mapper.LoverGroupMapper">
+
+    <!-- 对应 resultMap 定义 -->
+    <resultMap id="LoverGroupResultMap" type="com.iven.memo.models.DO.LoverGroup">
+        <id column="id" property="id"/>
+        <result column="user1_id" property="user1Id"/>
+        <result column="user2_id" property="user2Id"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="com.iven.memo.models.DO.LoverGroup" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO tb_lover_group
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            user1_id,
+            user2_id
+            <if test="createTime != null">
+                ,create_time
+            </if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{user1Id},
+            #{user2Id}
+            <if test="createTime != null">
+                ,#{createTime}
+            </if>
+        </trim>
+    </insert>
+
+    <!-- 根据id更新 -->
+    <update id="updateById" parameterType="com.iven.memo.models.DO.LoverGroup">
+        UPDATE tb_lover_group
+        SET user1_id = #{user1Id}, user2_id = #{user2Id}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据id删除 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM tb_lover_group WHERE id = #{id}
+    </delete>
+
+    <!-- 根据id查找 -->
+    <select id="findById" parameterType="long" resultMap="LoverGroupResultMap">
+        SELECT * FROM tb_lover_group WHERE id = #{id}
+    </select>
+
+    <!-- 通过成员id查找情侣组（男/女任意）-->
+    <select id="findByLoverId" parameterType="long" resultMap="LoverGroupResultMap">
+        SELECT *
+        FROM tb_lover_group
+        WHERE user1_id = #{id} OR user2_id = #{id}
+    </select>
+
+    <!-- 通过伴侣成员id删除情侣组（男/女任意）-->
+    <delete id="deleteByLoverId" parameterType="long">
+        DELETE FROM tb_lover_group WHERE user1_id = #{id} OR user2_id = #{id}
+    </delete>
+
+</mapper>

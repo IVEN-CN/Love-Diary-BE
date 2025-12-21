@@ -3,11 +3,12 @@ package com.iven.memo.service.impl;
 import com.iven.memo.exceptions.*;
 import com.iven.memo.handler.CommonMessageWebSocketHandler;
 import com.iven.memo.mapper.BindInviteMapper;
+import com.iven.memo.mapper.LoverGroupMapper;
 import com.iven.memo.mapper.UserMapper;
 import com.iven.memo.models.DO.BindInvite;
+import com.iven.memo.models.DO.LoverGroup;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.BindInvite.BindInviteRecordDTO;
-import com.iven.memo.models.DTO.BindInvite.BindInviteRequest;
 import com.iven.memo.models.DTO.BindInvite.BindResponseRecordDTO;
 import com.iven.memo.models.DTO.BindInvite.SystemMessageDTO;
 import com.iven.memo.models.DTO.BindInvite.UnifiedSystemMessageDTO;
@@ -25,7 +26,6 @@ import com.iven.memo.utils.Base62Utils;
 import com.iven.memo.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Base64Util;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,6 +45,7 @@ public class UserServiceImpl implements UserService {
     private final BindInviteMapper inviteMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final BindInviteRedisService bindInviteRedisService;
+    private final LoverGroupMapper loverGroupMapper;
 
     @Override
     public UserTokenResponseDTO login(String username, String password) {
@@ -233,7 +234,7 @@ public class UserServiceImpl implements UserService {
                 .build();
         applicationEventPublisher.publishEvent(bindInfo);
 
-        // 清除当前用户的loverId
+        // XXX 需要废弃：清除当前用户的loverId
         currentUser.setLoverId(null);
         int influence1 = userMapper.updateById(currentUser);
         log.info("mybatis update User {}", currentUser);
@@ -241,7 +242,7 @@ public class UserServiceImpl implements UserService {
             throw new GlobalException("解绑伴侣时，更新当前用户失败，mybatis影响行数为0");
         }
 
-        // 清除伴侣的loverId
+        // XXX 需要废弃：清除伴侣的loverId
         User lover = loverOptional.get();
         lover.setLoverId(null);
         int influence2 = userMapper.updateById(lover);
@@ -249,6 +250,10 @@ public class UserServiceImpl implements UserService {
         if (influence2 <= 0) {
             throw new GlobalException("解绑伴侣时，更新伴侣用户失败，mybatis影响行数为0");
         }
+
+        // 删除对应的情侣组
+        loverGroupMapper.deleteByLoverId(currentUser.getId());
+        log.info("mybatis delete LoverGroup by LoverId {}", currentUser.getId());
     }
 
     @Override
@@ -283,6 +288,8 @@ public class UserServiceImpl implements UserService {
             log.error("绑定邀请的发送用户不存在: {}", invite);
             throw new DataNotFound("绑定邀请的发送用户不存在");
         }
+
+        // XXX 需要废弃，不再通过user.loverId维护情侣关系
         User lover = loverOptional.get();
         lover.setLoverId(invite.getToUserId());
         int influenceLoverUserUpdate = userMapper.updateById(lover);
@@ -296,6 +303,13 @@ public class UserServiceImpl implements UserService {
         if (influenceCurrentUserUpdate <= 0) {
             throw new GlobalException("接受伴侣绑定时，更新当前用户失败，mybatis影响行数为0");
         }
+
+        // 新建情侣组
+        LoverGroup newLoverGroup = LoverGroup.builder()
+                .user1Id(currentUser.getId())
+                .user2Id(lover.getId())
+                .build();
+        loverGroupMapper.insert(newLoverGroup);
 
         // 保存响应记录到Redis（7天过期）
         BindResponseRecord responseRecord = BindResponseRecord.builder()
