@@ -2,8 +2,10 @@ package com.iven.memo.controller;
 
 import com.iven.memo.BaseTest;
 import com.iven.memo.LoginTest;
+import com.iven.memo.mapper.LoverGroupMapper;
 import com.iven.memo.mapper.MemoMapper;
 import com.iven.memo.mapper.UserMapper;
+import com.iven.memo.models.DO.LoverGroup;
 import com.iven.memo.models.DO.Memo;
 import com.iven.memo.models.DO.User;
 import com.iven.memo.models.DTO.Memo.MemoInfoDTO;
@@ -31,6 +33,8 @@ class MemoControllerTest extends BaseTest implements LoginTest {
     private MemoMapper memoMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private LoverGroupMapper loverGroupMapper;
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -317,6 +321,196 @@ class MemoControllerTest extends BaseTest implements LoginTest {
                 .andDo(result -> {
                     String responseContent = result.getResponse().getContentAsString();
                     log.info("Response content in testDeleteMemoNonExistentId: {}", responseContent);
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    /**
+     * <h1>多用户场景：不同LoverGroup的用户备忘互不可见</h1>
+     * 测试用户A和用户B不属于同一个LoverGroup时，A无法看到B的备忘，B也无法看到A的备忘
+     */
+    @Test
+    void testMemosNotVisibleBetweenDifferentLoverGroups() throws Exception {
+        // 准备用户A
+        User userA = User.builder()
+                .nickName("测试用户A昵称")
+                .userName("test_user_a")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userA);
+        log.info("Created userA: {}", userA);
+
+        // 准备用户B
+        User userB = User.builder()
+                .nickName("测试用户B昵称")
+                .userName("test_user_b")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userB);
+        log.info("Created userB: {}", userB);
+
+        // 准备用户C（与用户A在同一个LoverGroup）
+        User userC = User.builder()
+                .nickName("测试用户C昵称")
+                .userName("test_user_c")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userC);
+        log.info("Created userC: {}", userC);
+
+        // 创建LoverGroup1：用户A和用户C
+        LoverGroup loverGroup1 = LoverGroup.builder()
+                .user1Id(userA.getId())
+                .user2Id(userC.getId())
+                .createTime(LocalDate.now())
+                .build();
+        loverGroupMapper.insert(loverGroup1);
+        log.info("Created loverGroup1 for userA and userC: {}", loverGroup1);
+
+        // 用户B单独一人，不属于任何LoverGroup
+        
+        // 用户A创建备忘
+        Memo memoA = Memo.builder()
+                .type(MemoType.NICE_EVENT)
+                .date(LocalDate.now())
+                .details("用户A的私密备忘")
+                .userId(userA.getId())
+                .build();
+        memoMapper.insert(memoA);
+        log.info("Created memoA: {}", memoA);
+
+        // 用户B创建备忘
+        Memo memoB = Memo.builder()
+                .type(MemoType.BAD_EVENT)
+                .date(LocalDate.now().plusDays(1))
+                .details("用户B的私密备忘")
+                .userId(userB.getId())
+                .build();
+        memoMapper.insert(memoB);
+        log.info("Created memoB: {}", memoB);
+
+        // 生成用户A的JWT
+        String jwtA = jwtUtil.generateToken(userA.getId());
+        
+        // 生成用户B的JWT
+        String jwtB = jwtUtil.generateToken(userB.getId());
+
+        // 用户A获取备忘列表，应该只能看到自己的备忘（不能看到用户B的）
+        mockMvc.perform(MockMvcRequestBuilders.get("/memos")
+                        .header("Authorization", "Bearer " + jwtA))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("UserA get memos response: {}", responseContent);
+                    // 验证响应中不包含用户B的备忘内容
+                    Assertions.assertFalse(responseContent.contains("用户B的私密备忘"),
+                            "用户A不应该看到用户B的备忘");
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        // 用户B获取备忘列表，应该只能看到自己的备忘（不能看到用户A的）
+        mockMvc.perform(MockMvcRequestBuilders.get("/memos")
+                        .header("Authorization", "Bearer " + jwtB))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("UserB get memos response: {}", responseContent);
+                    // 验证响应中不包含用户A的备忘内容
+                    Assertions.assertFalse(responseContent.contains("用户A的私密备忘"),
+                            "用户B不应该看到用户A的备忘");
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    /**
+     * <h1>多用户场景：同一LoverGroup的用户可以共享备忘</h1>
+     * 测试用户A和用户B属于同一个LoverGroup时，A可以看到B的备忘，B也可以看到A的备忘
+     */
+    @Test
+    void testMemosVisibleWithinSameLoverGroup() throws Exception {
+        // 准备用户A
+        User userA = User.builder()
+                .nickName("恋人A昵称")
+                .userName("lover_a")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userA);
+        log.info("Created userA: {}", userA);
+
+        // 准备用户B
+        User userB = User.builder()
+                .nickName("恋人B昵称")
+                .userName("lover_b")
+                .password("123456")
+                .birthday(LocalDate.now())
+                .build();
+        userMapper.insert(userB);
+        log.info("Created userB: {}", userB);
+
+        // 创建LoverGroup：用户A和用户B
+        LoverGroup loverGroup = LoverGroup.builder()
+                .user1Id(userA.getId())
+                .user2Id(userB.getId())
+                .createTime(LocalDate.now())
+                .build();
+        loverGroupMapper.insert(loverGroup);
+        log.info("Created loverGroup for userA and userB: {}", loverGroup);
+
+        // 用户A创建备忘
+        Memo memoA = Memo.builder()
+                .type(MemoType.NICE_EVENT)
+                .date(LocalDate.now())
+                .details("用户A创建的共享备忘")
+                .userId(userA.getId())
+                .build();
+        memoMapper.insert(memoA);
+        log.info("Created memoA: {}", memoA);
+
+        // 用户B创建备忘
+        Memo memoB = Memo.builder()
+                .type(MemoType.BAD_EVENT)
+                .date(LocalDate.now().plusDays(2))
+                .details("用户B创建的共享备忘")
+                .userId(userB.getId())
+                .build();
+        memoMapper.insert(memoB);
+        log.info("Created memoB: {}", memoB);
+
+        // 生成用户A的JWT
+        String jwtA = jwtUtil.generateToken(userA.getId());
+        
+        // 生成用户B的JWT
+        String jwtB = jwtUtil.generateToken(userB.getId());
+
+        // 用户A获取备忘列表，应该能看到自己的备忘和用户B的备忘
+        mockMvc.perform(MockMvcRequestBuilders.get("/memos")
+                        .header("Authorization", "Bearer " + jwtA))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("UserA get memos response: {}", responseContent);
+                    // 验证响应中包含用户A的备忘
+                    Assertions.assertTrue(responseContent.contains("用户A创建的共享备忘"),
+                            "用户A应该看到自己的备忘");
+                    // 验证响应中包含用户B的备忘
+                    Assertions.assertTrue(responseContent.contains("用户B创建的共享备忘"),
+                            "用户A应该看到同一LoverGroup中用户B的备忘");
+                })
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        // 用户B获取备忘列表，应该能看到自己的备忘和用户A的备忘
+        mockMvc.perform(MockMvcRequestBuilders.get("/memos")
+                        .header("Authorization", "Bearer " + jwtB))
+                .andDo(result -> {
+                    String responseContent = result.getResponse().getContentAsString();
+                    log.info("UserB get memos response: {}", responseContent);
+                    // 验证响应中包含用户B的备忘
+                    Assertions.assertTrue(responseContent.contains("用户B创建的共享备忘"),
+                            "用户B应该看到自己的备忘");
+                    // 验证响应中包含用户A的备忘
+                    Assertions.assertTrue(responseContent.contains("用户A创建的共享备忘"),
+                            "用户B应该看到同一LoverGroup中用户A的备忘");
                 })
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
