@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -212,11 +213,11 @@ class MemoControllerTest extends BaseTest implements LoginTest {
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         // 校验结果
-        Memo updatedMemo = memoMapper.findById(memo.getId());
-        Assertions.assertNotNull(updatedMemo);
-        Assertions.assertEquals(MemoType.BAD_EVENT, updatedMemo.getType());
-        Assertions.assertEquals("修改后的测试文字", updatedMemo.getDetails());
-        Assertions.assertEquals(LocalDate.now().plusDays(5), updatedMemo.getDate());
+        Optional<Memo> updatedMemo = memoMapper.findById(memo.getId());
+        Assertions.assertTrue(updatedMemo.isPresent());
+        Assertions.assertEquals(MemoType.BAD_EVENT, updatedMemo.get().getType());
+        Assertions.assertEquals("修改后的测试文字", updatedMemo.get().getDetails());
+        Assertions.assertEquals(LocalDate.now().plusDays(5), updatedMemo.get().getDate());
     }
 
     /**
@@ -305,8 +306,8 @@ class MemoControllerTest extends BaseTest implements LoginTest {
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         // 校验删除
-        Memo deletedMemo = memoMapper.findById(memo.getId());
-        Assertions.assertNull(deletedMemo);
+        Optional<Memo> deletedMemo = memoMapper.findById(memo.getId());
+        Assertions.assertTrue(deletedMemo.isEmpty());
     }
 
     /**
@@ -322,7 +323,7 @@ class MemoControllerTest extends BaseTest implements LoginTest {
                     String responseContent = result.getResponse().getContentAsString();
                     log.info("Response content in testDeleteMemoNonExistentId: {}", responseContent);
                 })
-                .andExpect(MockMvcResultMatchers.status().isOk());
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
     /**

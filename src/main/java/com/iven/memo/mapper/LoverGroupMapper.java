@@ -40,6 +40,13 @@ public interface LoverGroupMapper {
     Optional<LoverGroup> findByLoverId(Long id);
 
     /**
+     * 通过用户id查找伴侣的id
+     * @param userId 用户id
+     * @return 伴侣id，如果没有伴侣则返回null
+     */
+    Long findLoverIdByUserId(Long userId);
+
+    /**
      * 通过伴侣的id删除伴侣组，用于伴侣解绑
      * @param id 成员id
      */

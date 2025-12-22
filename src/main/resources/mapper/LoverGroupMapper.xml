@@ -55,6 +55,17 @@
         WHERE user1_id = #{id} OR user2_id = #{id}
     </select>
 
+    <select id="findLoverIdByUserId" resultType="java.lang.Long">
+        SELECT
+            CASE
+                WHEN user1_id = #{id} THEN user2_id
+                WHEN user2_id = #{id} THEN user1_id
+                ELSE NULL
+            END AS lover_id
+        FROM tb_lover_group
+        WHERE user1_id = #{id} OR user2_id = #{id}
+    </select>
+
     <!-- 通过伴侣成员id删除情侣组（男/女任意）-->
     <delete id="deleteByLoverId" parameterType="long">
         DELETE FROM tb_lover_group WHERE user1_id = #{id} OR user2_id = #{id}
